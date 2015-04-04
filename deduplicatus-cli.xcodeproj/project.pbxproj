@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D074DCF11ACD1597008EF8D1 /* Config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DCEF1ACD1597008EF8D1 /* Config.cpp */; };
+		D074DCF41ACD3127008EF8D1 /* WebAuth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DCF21ACD3127008EF8D1 /* WebAuth.cpp */; };
+		D074DCF71ACD313C008EF8D1 /* FileOperation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DCF51ACD313C008EF8D1 /* FileOperation.cpp */; };
+		D074DCFA1ACD3E7D008EF8D1 /* tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DCF81ACD3E7D008EF8D1 /* tool.cpp */; };
+		D074DCFF1ACE8723008EF8D1 /* libleveldb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D074DCFE1ACE8723008EF8D1 /* libleveldb.a */; };
+		D074DD071ACFC834008EF8D1 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD051ACFC834008EF8D1 /* Level.cpp */; };
 		D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0FE2FFE1AC9438500DA877B /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +29,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D074DCEF1ACD1597008EF8D1 /* Config.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Config.cpp; sourceTree = "<group>"; };
+		D074DCF01ACD1597008EF8D1 /* Config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Config.h; sourceTree = "<group>"; };
+		D074DCF21ACD3127008EF8D1 /* WebAuth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebAuth.cpp; sourceTree = "<group>"; };
+		D074DCF31ACD3127008EF8D1 /* WebAuth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebAuth.h; sourceTree = "<group>"; };
+		D074DCF51ACD313C008EF8D1 /* FileOperation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileOperation.cpp; sourceTree = "<group>"; };
+		D074DCF61ACD313C008EF8D1 /* FileOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FileOperation.h; sourceTree = "<group>"; };
+		D074DCF81ACD3E7D008EF8D1 /* tool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tool.cpp; sourceTree = "<group>"; };
+		D074DCF91ACD3E7D008EF8D1 /* tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tool.h; sourceTree = "<group>"; };
+		D074DCFD1ACD5E2F008EF8D1 /* define.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = define.h; sourceTree = "<group>"; };
+		D074DCFE1ACE8723008EF8D1 /* libleveldb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libleveldb.a; path = leveldb/libleveldb.a; sourceTree = "<group>"; };
+		D074DD051ACFC834008EF8D1 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Level.cpp; sourceTree = "<group>"; };
+		D074DD061ACFC834008EF8D1 /* Level.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Level.h; sourceTree = "<group>"; };
 		D0FE2FFB1AC9438500DA877B /* deduplicatus-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "deduplicatus-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FE2FFE1AC9438500DA877B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -32,6 +50,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D074DCFF1ACE8723008EF8D1 /* libleveldb.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -41,6 +60,7 @@
 		D0FE2FF21AC9438500DA877B = {
 			isa = PBXGroup;
 			children = (
+				D074DCFE1ACE8723008EF8D1 /* libleveldb.a */,
 				D0FE2FFD1AC9438500DA877B /* deduplicatus-cli */,
 				D0FE2FFC1AC9438500DA877B /* Products */,
 			);
@@ -58,6 +78,17 @@
 			isa = PBXGroup;
 			children = (
 				D0FE2FFE1AC9438500DA877B /* main.cpp */,
+				D074DCEF1ACD1597008EF8D1 /* Config.cpp */,
+				D074DCF01ACD1597008EF8D1 /* Config.h */,
+				D074DD051ACFC834008EF8D1 /* Level.cpp */,
+				D074DD061ACFC834008EF8D1 /* Level.h */,
+				D074DCF21ACD3127008EF8D1 /* WebAuth.cpp */,
+				D074DCF31ACD3127008EF8D1 /* WebAuth.h */,
+				D074DCF51ACD313C008EF8D1 /* FileOperation.cpp */,
+				D074DCF61ACD313C008EF8D1 /* FileOperation.h */,
+				D074DCF81ACD3E7D008EF8D1 /* tool.cpp */,
+				D074DCF91ACD3E7D008EF8D1 /* tool.h */,
+				D074DCFD1ACD5E2F008EF8D1 /* define.h */,
 			);
 			path = "deduplicatus-cli";
 			sourceTree = "<group>";
@@ -118,7 +149,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D074DD071ACFC834008EF8D1 /* Level.cpp in Sources */,
 				D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */,
+				D074DCF41ACD3127008EF8D1 /* WebAuth.cpp in Sources */,
+				D074DCF11ACD1597008EF8D1 /* Config.cpp in Sources */,
+				D074DCFA1ACD3E7D008EF8D1 /* tool.cpp in Sources */,
+				D074DCF71ACD313C008EF8D1 /* FileOperation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,14 +238,40 @@
 		D0FE30031AC9438500DA877B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/leveldb",
+				);
+				OTHER_LDFLAGS = (
+					"-lcurl",
+					"-I\"rapidjson/include\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
+				VALID_ARCHS = "i386 x86_64";
 			};
 			name = Debug;
 		};
 		D0FE30041AC9438500DA877B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/leveldb",
+				);
+				OTHER_LDFLAGS = (
+					"-lcurl",
+					"-I\"rapidjson/include\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
+				VALID_ARCHS = "i386 x86_64";
 			};
 			name = Release;
 		};
@@ -232,6 +294,7 @@
 				D0FE30041AC9438500DA877B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
