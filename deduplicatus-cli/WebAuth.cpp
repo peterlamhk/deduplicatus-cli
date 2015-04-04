@@ -102,13 +102,19 @@ void WebAuth::getStatus() {
         curl_free(q_lock);
     }
 
+    struct curl_slist *headers = NULL;
+    set_header_postform(headers);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
     curl_code = curl_easy_perform(curl);
+    
+    // free memory and structures
     free(query);
+    curl_slist_free_all(headers);
     
     if( curl_code != CURLE_OK ) {
         cerr << "Error: Can't reach server." << endl;
@@ -150,12 +156,18 @@ int WebAuth::signin(char * email, char * password) {
     char * q_password = curl_easy_escape(curl, password, sizeof(password));
     strcat(query, q_password);
     
+    struct curl_slist *headers = NULL;
+    set_header_postform(headers);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_code = curl_easy_perform(curl);
+    
+    // free memory and structures
     free(query);
+    curl_slist_free_all(headers);
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
@@ -183,12 +195,17 @@ int WebAuth::downloadLevel() {
     
     // init request lock
     curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_lock).c_str());
+    
+    struct curl_slist *headers = NULL;
+    set_header_postform(headers);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POST, 1);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_code = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) {
