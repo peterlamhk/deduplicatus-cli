@@ -54,6 +54,11 @@ int main(int argc, const char * argv[]) {
 
             // sigin client and download leveldb in current folder
             operationResult = wa->signin(email, password);
+            
+            if( operationResult != ERR_NONE ) {
+                // signout the account if there is a problem while locking leveldb
+                wa->signout(false);
+            }
         }
     }
 

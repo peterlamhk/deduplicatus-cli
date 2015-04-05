@@ -330,6 +330,10 @@ int WebAuth::downloadLevel() {
             cerr << "Error: LevelDB currently locked by another client." << endl;
             return ERR_LEVEL_LOCKED;
             
+        } else if( http_code == 412 ) {
+            cerr << "Error: Please finalize the cloud storage setting on the webside." << endl;
+            return ERR_LEVEL_NOT_FINALIZED;
+            
         } else {
             cerr << "Error: Can't lock levelDB because server error." << endl;
             return ERR_SERVER_ERROR;
