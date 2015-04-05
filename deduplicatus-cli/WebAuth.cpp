@@ -9,11 +9,13 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
 #include <curl/curl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
+#include <libgen.h>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -37,6 +39,10 @@ size_t write_data(char *ptr, size_t size, size_t nmemb, void *userdata) {
 size_t write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     size_t written = fwrite(ptr, size, nmemb, stream);
     return written;
+}
+
+size_t write_null(void *ptr, size_t size, size_t nmemb, void *data) {
+    return size * nmemb;
 }
 
 WebAuth::WebAuth(Config *c) {
@@ -91,8 +97,7 @@ void WebAuth::getStatus() {
 
     // init request status
     curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_status).c_str());
-    curl_easy_setopt(curl, CURLOPT_POST, 1);
-    
+
     char * query = (char *) malloc(sizeof(char) * MAX_LEN_QUERY);
     strcpy(query, "lock=");
     
@@ -102,9 +107,6 @@ void WebAuth::getStatus() {
         curl_free(q_lock);
     }
 
-    struct curl_slist *headers = NULL;
-    set_header_postform(headers);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
@@ -114,8 +116,7 @@ void WebAuth::getStatus() {
     
     // free memory and structures
     free(query);
-    curl_slist_free_all(headers);
-    
+
     if( curl_code != CURLE_OK ) {
         cerr << "Error: Can't reach server." << endl;
         exit(ERR_SERVER_ERROR);
@@ -143,7 +144,6 @@ int WebAuth::signin(char * email, char * password) {
     
     // init request status
     curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_signin).c_str());
-    curl_easy_setopt(curl, CURLOPT_POST, 1);
     
     // build request query
     char * query = (char *) malloc(sizeof(char) * MAX_LEN_QUERY);
@@ -156,18 +156,13 @@ int WebAuth::signin(char * email, char * password) {
     char * q_password = curl_easy_escape(curl, password, sizeof(password));
     strcat(query, q_password);
     
-    struct curl_slist *headers = NULL;
-    set_header_postform(headers);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_null);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_code = curl_easy_perform(curl);
     
     // free memory and structures
     free(query);
-    curl_slist_free_all(headers);
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
@@ -176,6 +171,7 @@ int WebAuth::signin(char * email, char * password) {
     
     if( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) {
         // success, continue to download leveldb files
+        cout << "Account signed in." << endl;
         return downloadLevel();
 
     } else {
@@ -185,27 +181,18 @@ int WebAuth::signin(char * email, char * password) {
     }
 }
 
-int WebAuth::signout() {
-    
-    return ERR_NONE;
-}
-
 int WebAuth::downloadLevel() {
     long curl_code = 0, http_code = 0;
     
     // init request lock
     curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_lock).c_str());
     
-    struct curl_slist *headers = NULL;
-    set_header_postform(headers);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POST, 1);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_code = curl_easy_perform(curl);
-    curl_slist_free_all(headers);
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) {
@@ -288,17 +275,20 @@ int WebAuth::downloadLevel() {
         }
         
         // open leveldb to check userid and versionid
-        Level db;
-        db.open(directory);
+        Level *db = new Level();
+        db->open(directory);
         
-        string level_userid = db.get("metafile::userid");
-        string level_versionid = db.get("metafile::version");
+        string level_userid = db->get("metafile::userid");
+        string level_versionid = db->get("metafile::version");
 
         if( userid.compare(level_userid) != 0 ||
            versionid.compare(level_versionid) != 0 ) {
             cerr << "Error: Incorrect leveldb downloaded." << endl;
             return ERR_LEVEL_CORRUPTED;
         }
+        
+        // close leveldb
+        delete db;
         
         // prepare DOM for storing client state
         Document store;
@@ -331,7 +321,7 @@ int WebAuth::downloadLevel() {
         fwrite(jsonString.c_str(), sizeof(char), jsonString.length(), jsonFile);
         fclose(jsonFile);
         
-        cout << "Success." << endl;
+        cout << "LevelDB downloaded." << endl;
         return ERR_NONE;
         
     } else {
@@ -345,4 +335,239 @@ int WebAuth::downloadLevel() {
             return ERR_SERVER_ERROR;
         }
     }
+}
+
+int WebAuth::sync() {
+    long curl_code = 0, http_code = 0;
+    map<string, string> filesHash;
+    
+    // hash all leveldb files into string map
+    DIR *dir;
+    struct dirent *dirp;
+    
+    if( (dir = opendir(c->user_lock.c_str())) == NULL ) {
+        cerr << "Error: Can't access levelDB files." << endl;
+        return ERR_LOCAL_ERROR;
+    }
+
+    while( (dirp = readdir(dir)) != NULL ) {
+        if( dirp->d_name[0] == '.' ) {
+            // skip if it is a hidden file
+            continue;
+        }
+        string path = c->user_lock + "/" + string(dirp->d_name);
+        filesHash.insert(std::make_pair(string(dirp->d_name), sha1_file(path.c_str())));
+    }
+    closedir(dir);
+    free(dirp);
+
+    // prepare JSON request to /client/newVersion
+    Document d;
+    d.SetObject();
+    Document::AllocatorType& allocator = d.GetAllocator();
+    {
+        // set "lock" variable
+        Value s_lock;
+        s_lock.SetString(c->user_lock.c_str(), (unsigned) c->user_lock.length(), allocator);
+        d.AddMember("lock", s_lock, allocator);
+        
+        // set "files" variable
+        Value files(kObjectType);
+        for( map<string, string>::iterator it = filesHash.begin(); it != filesHash.end(); ++it ) {
+            Value key(it->first.c_str(), allocator);
+            Value val(it->second.c_str(), allocator);
+            
+            files.AddMember(key, val, allocator);
+        }
+        d.AddMember("files", files, allocator);
+    }
+    
+    // stringify the JSON
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    d.Accept(writer);
+    string jsonString = buffer.GetString();
+    
+    // post first JSON request
+    curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_newVersion).c_str());
+    
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    curl_code = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
+        cerr << "Error: Can't declare new version. Code: " << http_code << endl;
+        return ERR_SERVER_ERROR;
+    }
+
+    // parse the response, obtain the new version id and files required to upload
+    Document r;
+    r.Parse(stream.str().c_str());
+
+    // reset curl
+    resetCurl();
+
+    Value& v_next_version = r["nextVersion"];
+    Value& v_files = r["files"];
+    
+    string next_version = v_next_version.GetString();
+
+    // upload files to /upload/:versionid/:filename
+    for( Value::ConstValueIterator itr = v_files.Begin(); itr != v_files.End(); ++itr) {
+        string filename = itr->GetString();
+        string path = c->user_lock + "/" + string(basename((char *) filename.c_str()));
+        string endpoint = c->web_front + c->path_upload + "/" + next_version + "/" + filename;
+        
+        struct curl_httppost *formpost = NULL;
+        struct curl_httppost *lastptr = NULL;
+        curl_formadd(&formpost,
+                     &lastptr,
+                     CURLFORM_COPYNAME, "upload",
+                     CURLFORM_FILE, path.c_str(),
+                     CURLFORM_END);
+        curl_easy_setopt(curl, CURLOPT_URL, endpoint.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+        
+        curl_code = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
+            cerr << "Error: Can't upload file " << filename << ". Code: " << http_code << endl;
+            return ERR_SERVER_ERROR;
+        }
+        
+        // reset curl
+        curl_formfree(formpost);
+        resetCurl();
+    }
+
+    // add "versionid" into JSON
+    {
+        // set "lock" variable
+        Value s_versionid;
+        d.AddMember("versionid", v_next_version, allocator);
+    }
+    
+    // stringify the JSON
+    buffer.Clear();
+    writer.Reset(buffer);
+    d.Accept(writer);
+    jsonString = buffer.GetString();
+    
+    // post second JSON request to /client/commit for commit new version
+    curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_commit).c_str());
+
+    headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonString.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    
+    curl_code = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
+        cerr << "Error: Can't commit new version. Code: " << http_code << endl;
+        return ERR_SERVER_ERROR;
+    }
+    
+    // reset curl
+    resetCurl();
+    
+    // if done, update the local leveldb for metafile::version => new version
+    Level *db = new Level();
+    db->open(c->user_lock);
+    db->put("metafile::version", next_version);
+    delete db;
+    
+    cout << "LevelDB synced." << endl;
+    return ERR_NONE;
+}
+
+int WebAuth::unlock() {
+    long curl_code = 0, http_code = 0;
+    
+    // init request unlock
+    curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_unlock).c_str());
+    
+    char * query = (char *) malloc(sizeof(char) * MAX_LEN_QUERY);
+    strcpy(query, "lock=");
+    
+    if( c->user_json && c->user_lock.length() > 0 ) {
+        char * q_lock = curl_easy_escape(curl, c->user_lock.c_str(), (int) c->user_lock.length());
+        strcat(query, q_lock);
+        curl_free(q_lock);
+    }
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_null);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    curl_code = curl_easy_perform(curl);
+
+    // free memory and structures
+    free(query);
+    resetCurl();
+    
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
+        cerr << "Error: Can't unlock levelDB on server. Code: " << http_code << endl;
+        return ERR_SERVER_ERROR;
+    }
+
+    cout << "LevelDB unlocked." << endl;
+    return ERR_NONE;
+}
+
+int WebAuth::signout(bool removeDB) {
+    // init request unlock
+    curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_signout).c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_null);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "/tmp/deduplicatus.jar");
+    curl_easy_perform(curl);
+
+    // remove cookie and client state files
+    remove(c->client_cookie.c_str());
+    remove(c->client_data.c_str());
+    cout << "Account signed out." << endl;
+
+    // remove leveldb directory
+    if( removeDB ) {
+        // read directory and remove files inside
+        DIR *dir;
+        struct dirent *dirp;
+        
+        if( (dir = opendir(c->user_lock.c_str())) == NULL ) {
+            cerr << "Error: Can't access levelDB files." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+        
+        while( (dirp = readdir(dir)) != NULL ) {
+            if( dirp->d_name[0] == '.' ) {
+                // skip if it is a hidden file
+                continue;
+            }
+            string path = c->user_lock + "/" + string(dirp->d_name);
+            remove(path.c_str());
+        }
+        closedir(dir);
+        free(dirp);
+        
+        // remove the directory itself
+        remove(c->user_lock.c_str());
+    }
+
+    return ERR_NONE;
 }

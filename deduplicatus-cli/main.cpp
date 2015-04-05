@@ -43,7 +43,7 @@ int main(int argc, const char * argv[]) {
 
         // reject if current status is signed-in
         if( wa->isAuth ) {
-            cout << "Error: Please sign out to continue." << endl;
+            cerr << "Error: Please sign out to continue." << endl;
             operationResult = ERR_ALREADY_SIGNIN;
             
         } else {
@@ -64,17 +64,20 @@ int main(int argc, const char * argv[]) {
         
         // reject if current status is not signed-in
         if( !wa->isAuth ) {
-            cout << "Error: User is not signed in." << endl;
+            cerr << "Error: User is not signed in." << endl;
             operationResult = ERR_NOT_SIGNIN;
             
         } else {
+            int dbNotSynced = 1;
             if( wa->isLock ) {
-                // wa->sync();
-                // wa->unlock();
+                dbNotSynced = wa->sync();
+                wa->unlock();
             } else {
                 cerr << "Warning: LevelDB is not locked, local changes are discarded." << endl;
             }
-            operationResult = wa->signout();
+            
+            // signout function will remove local leveldb if it is synced
+            operationResult = wa->signout(dbNotSynced == 0);
         }
     }
     
@@ -84,12 +87,16 @@ int main(int argc, const char * argv[]) {
         wa->getStatus();
         
         // reject if current status is signed-in
-        if( !wa->isLock ) {
-            cout << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
+        if( !wa->isAuth ) {
+            cerr << "Error: User is not signed in." << endl;
+            operationResult = ERR_NOT_SIGNIN;
+            
+        } else if( !wa->isLock ) {
+            cerr << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
             operationResult = ERR_LEVEL_NOT_LOCKED;
             
         } else {
-            // operationResult = wa->sync();
+            operationResult = wa->sync();
         }
     }
     

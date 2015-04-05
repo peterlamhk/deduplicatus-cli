@@ -59,12 +59,10 @@ Config::Config() {
         free(userdata);
         
         Value& v_uid = d["userid"];
-        Value& v_version = d["version"];
         Value& v_lock = d["lock"];
         
         // set as variables in this class
         user_id = v_uid.GetString();
-        user_version = v_version.GetString();
         user_lock = v_lock.GetString();
         user_email = "";
         user_json = true;

@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Peter Lam. All rights reserved.
 //
 
+#include <iostream>
 #include "tool.h"
 #include "define.h"
 #include <stdlib.h>
@@ -52,14 +53,4 @@ string sha1_file(const char *filename) {
     free(digest);
     
     return (string) result;
-}
-
-void set_header_postform(struct curl_slist *headers) {
-    curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
-    curl_slist_append(headers, "charsets: utf-8");
-}
-
-void set_header_postjson(struct curl_slist *headers) {
-    curl_slist_append(headers, "Content-Type: application/json");
-    curl_slist_append(headers, "charsets: utf-8");
 }

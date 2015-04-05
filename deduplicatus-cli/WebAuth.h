@@ -23,8 +23,10 @@ public:
     void getStatus();
     void showStatus();
     int signin(char *, char *);
-    int signout();
-    
+    int signout(bool);
+    int sync();
+    int unlock();
+
 private:
     CURL *curl;
     Config *c;

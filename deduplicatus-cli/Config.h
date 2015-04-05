@@ -21,7 +21,6 @@ public:
     // User's data stored in json file
     bool user_json;
     string user_id;
-    string user_version;
     string user_lock;
     string user_email;
     
