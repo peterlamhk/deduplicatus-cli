@@ -57,6 +57,11 @@ WebAuth::~WebAuth() {
 }
 
 void WebAuth::initCurl() {
+    // ensure the stream is empty before any curl request
+    stream.str("");
+    stream.clear();
+    
+    // easy init curl handler
     curl = curl_easy_init();
     
     if( file_exists(c->client_cookie) ) {
@@ -574,4 +579,56 @@ int WebAuth::signout(bool removeDB) {
     }
 
     return ERR_NONE;
+}
+
+// This function should be invoked ONCE ONLY when a cloud api returning 4xx status.
+// Server-side init the request and new access tokens will be obtained.
+bool WebAuth::refreshToken(Level *db, string cloudid) {
+    long curl_code = 0, http_code = 0;
+    
+    // reset curl in case any unwanted string in stream
+    resetCurl();
+    
+    // init request refreshToken
+    curl_easy_setopt(curl, CURLOPT_URL, (c->web_front + c->path_refreshToken).c_str());
+    
+    // build request query
+    char * query = (char *) malloc(sizeof(char) * MAX_LEN_QUERY);
+    
+    strcpy(query, "lock=");
+    char * q_lock = curl_easy_escape(curl, c->user_lock.c_str(), 0);
+    strcat(query, q_lock);
+    
+    strcat(query, "&cloud=");
+    char * q_cloud = curl_easy_escape(curl, cloudid.c_str(), 0);
+    strcat(query, q_cloud);
+    
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &stream);
+    curl_code = curl_easy_perform(curl);
+    
+    // free memory and structures
+    free(query);
+    
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
+        cerr << "Error: Can't refresh access token for cloud storage." << endl;
+        return ERR_CLOUD_ERROR;
+    }
+    
+    // parse response to store new access and refresh tokens
+    Document d;
+    d.Parse(stream.str().c_str());
+
+    Value& v_accessToken = d["accessToken"];
+    Value& v_refreshToken = d["refreshToken"];
+
+    db->put("clouds::account::" + cloudid + "::accessToken", v_accessToken.GetString());
+    db->put("clouds::account::" + cloudid + "::refreshToken", v_refreshToken.GetString());
+    
+    // reset curl
+    resetCurl();
+    
+    return true;
 }

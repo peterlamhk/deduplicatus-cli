@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include "Config.h"
+#include "Level.h"
 
 class WebAuth {
 public:
@@ -26,6 +27,7 @@ public:
     int signout(bool);
     int sync();
     int unlock();
+    bool refreshToken(Level *, string);
 
 private:
     CURL *curl;
