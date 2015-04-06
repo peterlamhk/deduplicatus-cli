@@ -20,6 +20,7 @@
 using namespace std;
 
 void showUsage(const char *);
+int requireLocked(WebAuth *);
 int main(int, const char * []);
 
 int main(int argc, const char * argv[]) {
@@ -90,23 +91,17 @@ int main(int argc, const char * argv[]) {
     if( !operationFound && argc == 2 && strcmp(argv[1], "sync") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        
-        // reject if current status is signed-in
-        if( !wa->isAuth ) {
-            cerr << "Error: User is not signed in." << endl;
-            operationResult = ERR_NOT_SIGNIN;
-            
-        } else if( !wa->isLock ) {
-            cerr << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
-            operationResult = ERR_LEVEL_NOT_LOCKED;
-            
-        } else {
+
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             operationResult = wa->sync();
         }
     }
     
+    if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
+
+    }
+    
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {}
-    if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {}
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
@@ -128,6 +123,20 @@ int main(int argc, const char * argv[]) {
     return operationResult;
 }
 
+int requireLocked(WebAuth *wa) {
+    if( !wa->isAuth ) {
+        cerr << "Error: User is not signed in." << endl;
+        return ERR_NOT_SIGNIN;
+        
+    } else if( !wa->isLock ) {
+        cerr << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
+        return ERR_LEVEL_NOT_LOCKED;
+        
+    } else {
+        return ERR_NONE;
+    }
+}
+
 void showUsage(const char * path) {
     char * executable = basename((char *) path);
     
@@ -139,12 +148,12 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " signin <email> <password>" << endl;
     cout << "\t" << executable << " signout" << endl;
     cout << "\t" << executable << " sync" << endl;
+    cout << "\t" << executable << " ls-cloud" << endl;
     cout << endl;
 
     if( FILE_MANAGER_ENABLED ) {
         cout << "Usage (File Manager Mode):" << endl;
         cout << "\t" << executable << " ls <path>" << endl;
-        cout << "\t" << executable << " ls-cloud" << endl;
         cout << "\t" << executable << " put <local> <remote> <cloud-id>" << endl;
         cout << "\t" << executable << " get <remote> <cloud-id> <local>" << endl;
         cout << "\t" << executable << " mv <original> <cloud-id> <new>" << endl;
