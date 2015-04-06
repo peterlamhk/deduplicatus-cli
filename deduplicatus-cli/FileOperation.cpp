@@ -7,3 +7,20 @@
 //
 
 #include "FileOperation.h"
+#include "define.h"
+
+FileOperation::FileOperation(Config *c) {
+    FileOperation::c = c;
+}
+
+int FileOperation::listCloud(Level *db) {
+    // in this function, no need to separate codes for two storage modes
+    // if needed, use the following statements:
+    if( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        
+    } else {
+        
+    }
+    
+    return ERR_NONE;
+}

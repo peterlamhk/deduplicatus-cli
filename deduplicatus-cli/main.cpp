@@ -26,6 +26,7 @@ int main(int, const char * []);
 int main(int argc, const char * argv[]) {
     Config *c = new Config();
     WebAuth *wa = new WebAuth(c);
+    FileOperation *fo = new FileOperation(c);
     bool operationFound = false;
     unsigned operationResult = ERR_NONE;
     
@@ -98,7 +99,17 @@ int main(int argc, const char * argv[]) {
     }
     
     if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
-
+        operationFound = true;
+        wa->getStatus();
+        
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = fo->listCloud(db);
+            
+            // ensure to close leveldb handler
+            delete db;
+        }
     }
     
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {}
