@@ -23,10 +23,15 @@ public:
     string user_id;
     string user_lock;
     string user_email;
+    string user_mode;
     
     // Path of user's data in local
     string client_cookie;
     string client_data;
+    
+    // Mode definition
+    string mode_file_manager;
+    string mode_deduplication;
     
     // Endpoints of DeDuplicatus backend
     string web_front;

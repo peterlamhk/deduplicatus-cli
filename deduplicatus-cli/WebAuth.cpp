@@ -137,7 +137,7 @@ void WebAuth::getStatus() {
     
     // set variable to class
     isAuth = v_auth.GetBool();
-    isLock = v_lock.GetBool();
+    isLock = v_lock.GetBool() || ( c->user_mode.compare(c->mode_file_manager) == 0 );
     c->user_email = v_email.GetString();
     
     // reset curl
@@ -285,6 +285,7 @@ int WebAuth::downloadLevel() {
         
         string level_userid = db->get("metafile::userid");
         string level_versionid = db->get("metafile::version");
+        string level_mode = db->get("clouds::storageMode");
 
         if( userid.compare(level_userid) != 0 ||
            versionid.compare(level_versionid) != 0 ) {
@@ -305,14 +306,17 @@ int WebAuth::downloadLevel() {
             Value s_userid;
             Value s_version;
             Value s_lock;
+            Value s_mode;
         
             s_userid.SetString(userid.c_str(), (unsigned) userid.length(), allocator);
             s_version.SetString(versionid.c_str(), (unsigned) versionid.length(), allocator);
             s_lock.SetString(lockid.c_str(), (unsigned) lockid.length(), allocator);
+            s_mode.SetString(level_mode.c_str(), (unsigned) level_mode.length(), allocator);
             
             store.AddMember("userid", s_userid, allocator);
             store.AddMember("version", s_version, allocator);
             store.AddMember("lock", s_lock, allocator);
+            store.AddMember("mode", s_mode, allocator);
         }
         
         // stringify the DOM

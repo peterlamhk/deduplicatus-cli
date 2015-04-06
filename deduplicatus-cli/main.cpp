@@ -31,8 +31,6 @@ int main(int argc, const char * argv[]) {
     // exec: status
     if( !operationFound && argc == 2 && strcmp(argv[1], "status") == 0 ) {
         wa->showStatus();
-        
-        if( wa->isLock )
 
         operationFound = true;
         operationResult = ERR_NONE;

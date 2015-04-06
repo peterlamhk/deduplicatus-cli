@@ -22,6 +22,9 @@ Config::Config() {
     client_cookie = "client.jar";
     client_data = "client.json";
 
+    mode_file_manager = "file-manager";
+    mode_deduplication = "deduplication";
+    
 //    web_front = "https://deduplicatus.retepmal.com";
     web_front = "http://localhost";
     path_status = "/client/status";
@@ -60,11 +63,13 @@ Config::Config() {
         
         Value& v_uid = d["userid"];
         Value& v_lock = d["lock"];
+        Value& v_mode = d["mode"];
         
         // set as variables in this class
         user_id = v_uid.GetString();
         user_lock = v_lock.GetString();
         user_email = "";
+        user_mode = v_mode.GetString();
         user_json = true;
     }
     
