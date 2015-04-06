@@ -32,6 +32,8 @@ int main(int argc, const char * argv[]) {
     if( !operationFound && argc == 2 && strcmp(argv[1], "status") == 0 ) {
         wa->showStatus();
         
+        if( wa->isLock )
+
         operationFound = true;
         operationResult = ERR_NONE;
     }
@@ -106,14 +108,15 @@ int main(int argc, const char * argv[]) {
     }
     
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {}
-    if( !operationFound && argc == 4 && strcmp(argv[1], "ls-version") == 0 ) {}
-    if( !operationFound && argc == 4 && strcmp(argv[1], "put") == 0 ) {}
+    if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {}
+    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {}
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
-    if( !operationFound && argc == 3 && strcmp(argv[1], "mkdir") == 0 ) {}
-    if( !operationFound && argc == 3 && strcmp(argv[1], "rmdir") == 0 ) {}
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {}
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
     
     // show usage if no operation is done
     if( !operationFound ) {
@@ -132,11 +135,29 @@ void showUsage(const char * path) {
     
     cout << "Command-line interface for DeDuplicatus." << endl;
     cout << endl;
-    cout << "Usage:" << endl;
+    
+    cout << "Usage (General):" << endl;
     cout << "\t" << executable << " status" << endl;
     cout << "\t" << executable << " signin <email> <password>" << endl;
     cout << "\t" << executable << " signout" << endl;
     cout << "\t" << executable << " sync" << endl;
+    cout << endl;
+
+    if( FILE_MANAGER_ENABLED ) {
+        cout << "Usage (File Manager Mode):" << endl;
+        cout << "\t" << executable << " ls <path>" << endl;
+        cout << "\t" << executable << " ls-cloud" << endl;
+        cout << "\t" << executable << " put <local> <remote> <cloud-id>" << endl;
+        cout << "\t" << executable << " get <remote> <cloud-id> <local>" << endl;
+        cout << "\t" << executable << " mv <original> <cloud-id> <new>" << endl;
+        cout << "\t" << executable << " cp <original> <cloud-id> <new>" << endl;
+        cout << "\t" << executable << " rm <path> <cloud-id>" << endl;
+        cout << "\t" << executable << " mkdir <path> <cloud-id>" << endl;
+        cout << "\t" << executable << " rmdir <path> <cloud-id>" << endl;
+        cout << endl;
+    }
+
+    cout << "Usage (Deduplication-enabled Mode):" << endl;
     cout << "\t" << executable << " ls <path>" << endl;
     cout << "\t" << executable << " ls-version <path>" << endl;
     cout << "\t" << executable << " put <local> <remote>" << endl;
@@ -147,6 +168,7 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " mkdir <path>" << endl;
     cout << "\t" << executable << " rmdir <path>" << endl;
     cout << endl;
+    
     cout << "Caution:" << endl;
     cout << "\t! LevelDB files save at current folder." << endl;
     cout << "\t! Ensure to sync or sign out after all file operations. Otherwise the file system won't be saved." << endl;

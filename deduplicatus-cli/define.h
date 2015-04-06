@@ -9,6 +9,8 @@
 #ifndef deduplicatus_cli_error_h
 #define deduplicatus_cli_error_h
 
+#define FILE_MANAGER_ENABLED false
+
 #define ERR_NONE 0
 #define ERR_ALREADY_SIGNIN 1
 #define ERR_NOT_SIGNIN 2
