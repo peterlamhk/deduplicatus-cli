@@ -10,5 +10,18 @@
 #define __deduplicatus_cli__FileOperation__
 
 #include <stdio.h>
+#include "Config.h"
+#include "Level.h"
+
+using namespace std;
+
+class FileOperation {
+public:
+    FileOperation(Config *);
+    int listFile(Level *, char *);
+
+private:
+    Config *c;
+};
 
 #endif /* defined(__deduplicatus_cli__FileOperation__) */

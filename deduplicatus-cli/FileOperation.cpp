@@ -7,3 +7,13 @@
 //
 
 #include "FileOperation.h"
+#include "define.h"
+
+FileOperation::FileOperation(Config *c) {
+    FileOperation::c = c;
+}
+
+int FileOperation::listFile(Level *db, char *path) {
+
+    return ERR_NONE;
+}
