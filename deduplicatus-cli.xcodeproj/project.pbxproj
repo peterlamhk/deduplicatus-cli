@@ -16,6 +16,7 @@
 		D074DD151AD2A88D008EF8D1 /* Dropbox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD131AD2A88D008EF8D1 /* Dropbox.cpp */; };
 		D074DD1C1AD2B685008EF8D1 /* OneDrive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1A1AD2B685008EF8D1 /* OneDrive.cpp */; };
 		D074DD1F1AD2B68F008EF8D1 /* Box.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1D1AD2B68F008EF8D1 /* Box.cpp */; };
+		D074DD221AD3D5F7008EF8D1 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D074DD211AD3D5F7008EF8D1 /* CoreFoundation.framework */; };
 		D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0FE2FFE1AC9438500DA877B /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -51,6 +52,7 @@
 		D074DD1D1AD2B68F008EF8D1 /* Box.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Box.cpp; sourceTree = "<group>"; };
 		D074DD1E1AD2B68F008EF8D1 /* Box.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Box.h; sourceTree = "<group>"; };
 		D074DD201AD3BA13008EF8D1 /* CloudStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CloudStorage.h; sourceTree = "<group>"; };
+		D074DD211AD3D5F7008EF8D1 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		D0FE2FFB1AC9438500DA877B /* deduplicatus-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "deduplicatus-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FE2FFE1AC9438500DA877B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -60,6 +62,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D074DD221AD3D5F7008EF8D1 /* CoreFoundation.framework in Frameworks */,
 				D074DCFF1ACE8723008EF8D1 /* libleveldb.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -83,6 +86,7 @@
 		D0FE2FF21AC9438500DA877B = {
 			isa = PBXGroup;
 			children = (
+				D074DD211AD3D5F7008EF8D1 /* CoreFoundation.framework */,
 				D074DCFE1ACE8723008EF8D1 /* libleveldb.a */,
 				D0FE2FFD1AC9438500DA877B /* deduplicatus-cli */,
 				D0FE2FFC1AC9438500DA877B /* Products */,

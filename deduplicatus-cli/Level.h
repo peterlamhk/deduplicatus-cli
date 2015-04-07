@@ -23,6 +23,7 @@ public:
     string get(string);
     bool put(string, string);
     bool remove(string);
+    bool isKeyExists(string);
     leveldb::DB *getDB();
     
 private:

@@ -22,4 +22,5 @@ string sha1_file(const char *);
 void set_header_postform(struct curl_slist *);
 void set_header_postjson(struct curl_slist *);
 char* readable_fs(uint64_t, char *);
+string uuid();
 #endif /* defined(__deduplicatus_cli__tool__) */

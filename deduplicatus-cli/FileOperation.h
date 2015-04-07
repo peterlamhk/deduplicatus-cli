@@ -20,6 +20,7 @@ class FileOperation {
 public:
     FileOperation(Config *);
     int listCloud(Level *, WebAuth *);
+    int makeDirectory(Level *, const char *, const char *);
     
 private:
     Config *c;

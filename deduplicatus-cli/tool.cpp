@@ -15,6 +15,7 @@
 #include <curl/curl.h>
 #include <sys/stat.h>
 #include <CommonCrypto/CommonDigest.h>
+#include <CoreFoundation/CFUUID.h>
 
 using namespace std;
 
@@ -82,5 +83,35 @@ char* readable_fs(uint64_t size/*in bytes*/, char *buf) {
     }
     sprintf(buf, "%.*f %s", i, size_d, units[i]);
     return buf;
+}
+
+char * MYCFStringCopyUTF8String(CFStringRef aString) {
+    if (aString == NULL) {
+        return NULL;
+    }
+    
+    CFIndex length = CFStringGetLength(aString);
+    CFIndex maxSize =
+    CFStringGetMaximumSizeForEncoding(length,
+                                      kCFStringEncodingUTF8);
+    char *buffer = (char *)malloc(maxSize);
+    if (CFStringGetCString(aString, buffer, maxSize,
+                           kCFStringEncodingUTF8)) {
+        return buffer;
+    }
+    return NULL;
+}
+
+string uuid() {
+    auto guid = CFUUIDCreate(NULL);
+    auto bytes = CFUUIDCreateString(NULL, guid);
+    CFRelease(guid);
+
+    string result = (string) MYCFStringCopyUTF8String(bytes);
+    for( int i = 0; i < result.length(); i++ ) {
+        result[i] = tolower(result[i]);
+    }
+    
+    return result;
 }
 

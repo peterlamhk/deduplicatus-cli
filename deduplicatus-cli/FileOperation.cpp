@@ -10,6 +10,8 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include <time.h>
+#include <libgen.h>
 #include "FileOperation.h"
 #include "WebAuth.h"
 #include "Level.h"
@@ -65,5 +67,31 @@ int FileOperation::listCloud(Level *db, WebAuth *wa) {
         }
     }
 
+    return ERR_NONE;
+}
+
+int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud) {
+    if( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        if( db->isKeyExists("folder::" + (string)path + "::id") ) {
+            cerr << "Error: Directory already exists." << endl;
+            return ERR_FOLDER_EXISTS;
+        }
+        
+        if( !db->isKeyExists("folder::" + (string)dirname((char *)path) + "::id") ) {
+            cerr << "Error: Parent directory not exists." << endl;
+            return ERR_PARENT_FOLDER_NOT_EXISTS;
+        }
+        
+        stringstream timestamp;
+        timestamp << time(NULL);
+
+        db->put("folder::" + (string)path + "::id", uuid());
+        db->put("folder::" + (string)path + "::lastModified", timestamp.str());
+        cout << "Folder created." << endl;
+        
+    } else {
+        
+    }
+    
     return ERR_NONE;
 }
