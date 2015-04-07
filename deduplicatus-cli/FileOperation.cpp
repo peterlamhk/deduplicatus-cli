@@ -12,10 +12,25 @@
 #include "FileOperation.h"
 #include "Level.h"
 #include "define.h"
+#include <sstream>
+#include <iostream>
+#include <string>
+#include <regex>
+#include <time.h>
+#include <libgen.h>
+#include "FileOperation.h"
+#include "WebAuth.h"
+#include "Level.h"
+#include "Dropbox.h"
+#include "OneDrive.h"
+#include "Box.h"
+#include "define.h"
+#include "tool.h"
 
 #define NUM_FOLDER_KEY 2
 #define NUM_FILE_KEY 5
 #define NUM_VERSION_KEY 3
+using namespace std;
 
 FileOperation::FileOperation(Config *c) {
     FileOperation::c = c;
@@ -108,25 +123,96 @@ int FileOperation::listFile(Level *db, string path) {
     return ERR_NONE;
 }
 
+int FileOperation::listCloud(Level *db, WebAuth *wa) {
+    // in this function, no need to separate codes for two storage modes
+    cout << "Cloud ID\t\t\t\tProvider\tDisplay Name\tUsed\tQuota" << endl;
+
+    // iterate the list of cloud to get account info
+    leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+    for ( it->Seek("clouds::account::");
+            it->Valid() && it->key().ToString() < "clouds::account::\xFF";
+            it->Next() ) {
+
+        smatch sm;
+        regex_match(it->key().ToString(), sm, regex("^clouds::account::([0-9a-z\\-]+)::type$"));
+        if ( sm.size() > 0 ) {
+            string cloudid = sm[1];
+            CloudStorage *cloud = nullptr;
+
+            if ( it->value().ToString().compare(Dropbox::type()) == 0 ) {
+                cloud = new Dropbox(db->get("clouds::account::" + cloudid + "::accessToken"));
+            }
+            if ( it->value().ToString().compare(OneDrive::type()) == 0 ) {
+                cloud = new OneDrive(db->get("clouds::account::" + cloudid + "::accessToken"));
+            }
+            if ( it->value().ToString().compare(Box::type()) == 0 ) {
+                cloud = new Box(db->get("clouds::account::" + cloudid + "::accessToken"));
+            }
+
+            cloud->accountInfo(db, wa, cloudid);
+
+            char buf[10];
+            string displayName = ( cloud->displayName.length() > 0 ) ?
+                                 cloud->displayName :
+                                 db->get("clouds::account::" + cloudid + "::accountName");
+
+            cout << cloudid << "\t" <<
+                 cloud->brandName() << "\t" <<
+                 displayName << "\t" <<
+                 readable_fs(cloud->space_used, buf) << "\t" <<
+                 readable_fs(cloud->space_quota, buf) << endl;
+        }
+    }
+
+    return ERR_NONE;
+}
+
 int FileOperation::listVersion(Level *db, string path) {
-  if (c->user_mode.compare(c->mode_deduplication) == 0) {
-      int i, j;
-      string modified, size, chunks;
-      leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
-      cout << "Modified\t\tSize\tChunks" << endl;
-      for (it->Seek("version::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "version::" + path + "::\xFF"; it->Next(), i++) {
-          if (i % NUM_VERSION_KEY == 0) {
-            chunks = db->get(it->key().ToString());
-          } else if (i % NUM_VERSION_KEY == 1 ) {
-            modified = db->get(it->key().ToString());
-          } else {
-            size = db->get(it->key().ToString());
-            cout << modified << "\t" << size << "\t" << chunks << endl;
-          }
-      }
-  } else {
+    if (c->user_mode.compare(c->mode_deduplication) == 0) {
+        int i;
+        string modified, size, chunks;
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+        cout << "Modified\t\tSize\tChunks" << endl;
+        for (it->Seek("version::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "version::" + path + "::\xFF"; it->Next(), i++) {
+            if (i % NUM_VERSION_KEY == 0) {
+                chunks = db->get(it->key().ToString());
+            } else if (i % NUM_VERSION_KEY == 1 ) {
+                modified = db->get(it->key().ToString());
+            } else {
+                size = db->get(it->key().ToString());
+                cout << modified << "\t" << size << "\t" << chunks << endl;
+            }
+        }
+    } else {
 
-  }
+    }
 
-  return ERR_NONE;
+    return ERR_NONE;
+
+}
+
+int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        if ( db->isKeyExists("folder::" + (string)path + "::id") ) {
+            cerr << "Error: Directory already exists." << endl;
+            return ERR_FOLDER_EXISTS;
+        }
+
+        if ( !db->isKeyExists("folder::" + (string)dirname((char *)path) + "::id") ) {
+            cerr << "Error: Parent directory not exists." << endl;
+            return ERR_PARENT_FOLDER_NOT_EXISTS;
+        }
+
+        stringstream timestamp;
+        timestamp << time(NULL);
+
+        db->put("folder::" + (string)path + "::id", uuid());
+        db->put("folder::" + (string)path + "::lastModified", timestamp.str());
+        cout << "Folder created." << endl;
+
+    } else {
+
+    }
+
+    return ERR_NONE;
 }

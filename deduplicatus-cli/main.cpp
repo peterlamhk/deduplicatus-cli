@@ -99,7 +99,17 @@ int main(int argc, const char * argv[]) {
     }
 
     if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
-
+        operationFound = true;
+        wa->getStatus();
+        
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = fo->listCloud(db, wa);
+            
+            // ensure to close leveldb handler
+            delete db;
+        }
     }
 
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
@@ -135,7 +145,23 @@ int main(int argc, const char * argv[]) {
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
-    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {}
+    
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+        
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 3 ) ?
+                fo->makeDirectory(db, argv[2], "") :     // Deduplication-enabled Mode
+                fo->makeDirectory(db, argv[2], argv[3]); // File Manager Mode
+            
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+    
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
 
     // show usage if no operation is done

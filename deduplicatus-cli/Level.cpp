@@ -68,6 +68,17 @@ bool Level::remove(string key) {
     return db->Delete(leveldb::WriteOptions(), key).ok();
 }
 
+bool Level::isKeyExists(string key) {
+    if( !db ) {
+        cerr << "Warning: LevelDB not opened." << endl;
+        return false;
+    }
+    
+    string value;
+    s = db->Get(leveldb::ReadOptions(), key, &value);
+    return s.ok();
+}
+
 leveldb::DB *Level::getDB() {
     return db;
 }

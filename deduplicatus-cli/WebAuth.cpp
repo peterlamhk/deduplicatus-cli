@@ -29,22 +29,6 @@ using namespace std;
 using namespace rapidjson;
 ostringstream stream;
 
-size_t write_data(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    std::ostringstream *stream = (std::ostringstream*)userdata;
-    size_t count = size * nmemb;
-    stream->write(ptr, count);
-    return count;
-}
-
-size_t write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
-
-size_t write_null(void *ptr, size_t size, size_t nmemb, void *data) {
-    return size * nmemb;
-}
-
 WebAuth::WebAuth(Config *c) {
     // copy reference of Config and init curl handler
     WebAuth::c = c;
@@ -618,7 +602,7 @@ bool WebAuth::refreshToken(Level *db, string cloudid) {
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     if( !( http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK ) ) {
         cerr << "Error: Can't refresh access token for cloud storage." << endl;
-        return ERR_CLOUD_ERROR;
+        return false;
     }
     
     // parse response to store new access and refresh tokens

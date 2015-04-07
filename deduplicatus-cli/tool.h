@@ -14,8 +14,13 @@
 
 using namespace std;
 
+size_t write_data(char *, size_t, size_t, void *);
+size_t write_file(void *, size_t, size_t, FILE *);
+size_t write_null(void *, size_t, size_t, void *);
 bool file_exists(const string&);
 string sha1_file(const char *);
 void set_header_postform(struct curl_slist *);
 void set_header_postjson(struct curl_slist *);
+char* readable_fs(uint64_t, char *);
+string uuid();
 #endif /* defined(__deduplicatus_cli__tool__) */
