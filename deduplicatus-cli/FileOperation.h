@@ -18,7 +18,8 @@ using namespace std;
 class FileOperation {
 public:
     FileOperation(Config *);
-    int listFile(Level *, char *);
+    int listFile(Level *, string);
+    int listVersion(Level *, string);
 
 private:
     Config *c;

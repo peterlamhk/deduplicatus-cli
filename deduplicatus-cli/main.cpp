@@ -109,16 +109,27 @@ int main(int argc, const char * argv[]) {
         Level *db = new Level();
         db->open(c->user_lock);
 
-        char *path = (char *)malloc(sizeof(char) * MAX_LEN_QUERY);
-        strcpy(path, argv[2]);
-
+        string path = string(argv[2]);
         operationResult = fo->listFile(db, path);
 
         // ensure to close leveldb handler
         delete db;
       }
     }
-    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {}
+    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+        if((operationResult = requireLocked(wa)) == ERR_NONE) {
+          Level *db = new Level();
+          db->open(c->user_lock);
+
+          string path = string(argv[2]);
+          operationResult = fo->listVersion(db, path);
+
+          // ensure to close leveldb handler
+          delete db;
+        }
+    }
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
