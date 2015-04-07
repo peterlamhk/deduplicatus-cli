@@ -7,6 +7,7 @@
 //
 
 #include <iostream>
+#include <sstream>
 #include "tool.h"
 #include "define.h"
 #include <stdlib.h>
@@ -16,6 +17,22 @@
 #include <CommonCrypto/CommonDigest.h>
 
 using namespace std;
+
+size_t write_data(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    std::ostringstream *stream = (std::ostringstream*)userdata;
+    size_t count = size * nmemb;
+    stream->write(ptr, count);
+    return count;
+}
+
+size_t write_file(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
+size_t write_null(void *ptr, size_t size, size_t nmemb, void *data) {
+    return size * nmemb;
+}
 
 bool file_exists(const std::string& name) {
     struct stat buffer;
@@ -54,3 +71,16 @@ string sha1_file(const char *filename) {
     
     return (string) result;
 }
+
+char* readable_fs(uint64_t size/*in bytes*/, char *buf) {
+    double size_d = (double) size;
+    int i = 0;
+    const char* units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+    while (size_d > 1024) {
+        size_d /= 1024;
+        i++;
+    }
+    sprintf(buf, "%.*f %s", i, size_d, units[i]);
+    return buf;
+}
+

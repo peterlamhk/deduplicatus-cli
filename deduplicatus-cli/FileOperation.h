@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include "Config.h"
+#include "WebAuth.h"
 #include "Level.h"
 
 using namespace std;
@@ -18,7 +19,7 @@ using namespace std;
 class FileOperation {
 public:
     FileOperation(Config *);
-    int listCloud(Level *);
+    int listCloud(Level *, WebAuth *);
     
 private:
     Config *c;

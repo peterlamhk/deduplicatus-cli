@@ -13,6 +13,9 @@
 		D074DCFA1ACD3E7D008EF8D1 /* tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DCF81ACD3E7D008EF8D1 /* tool.cpp */; };
 		D074DCFF1ACE8723008EF8D1 /* libleveldb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D074DCFE1ACE8723008EF8D1 /* libleveldb.a */; };
 		D074DD071ACFC834008EF8D1 /* Level.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD051ACFC834008EF8D1 /* Level.cpp */; };
+		D074DD151AD2A88D008EF8D1 /* Dropbox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD131AD2A88D008EF8D1 /* Dropbox.cpp */; };
+		D074DD1C1AD2B685008EF8D1 /* OneDrive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1A1AD2B685008EF8D1 /* OneDrive.cpp */; };
+		D074DD1F1AD2B68F008EF8D1 /* Box.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1D1AD2B68F008EF8D1 /* Box.cpp */; };
 		D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0FE2FFE1AC9438500DA877B /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +44,13 @@
 		D074DCFE1ACE8723008EF8D1 /* libleveldb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libleveldb.a; path = leveldb/libleveldb.a; sourceTree = "<group>"; };
 		D074DD051ACFC834008EF8D1 /* Level.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Level.cpp; sourceTree = "<group>"; };
 		D074DD061ACFC834008EF8D1 /* Level.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Level.h; sourceTree = "<group>"; };
+		D074DD131AD2A88D008EF8D1 /* Dropbox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Dropbox.cpp; sourceTree = "<group>"; };
+		D074DD141AD2A88D008EF8D1 /* Dropbox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Dropbox.h; sourceTree = "<group>"; };
+		D074DD1A1AD2B685008EF8D1 /* OneDrive.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OneDrive.cpp; sourceTree = "<group>"; };
+		D074DD1B1AD2B685008EF8D1 /* OneDrive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OneDrive.h; sourceTree = "<group>"; };
+		D074DD1D1AD2B68F008EF8D1 /* Box.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Box.cpp; sourceTree = "<group>"; };
+		D074DD1E1AD2B68F008EF8D1 /* Box.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Box.h; sourceTree = "<group>"; };
+		D074DD201AD3BA13008EF8D1 /* CloudStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CloudStorage.h; sourceTree = "<group>"; };
 		D0FE2FFB1AC9438500DA877B /* deduplicatus-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "deduplicatus-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FE2FFE1AC9438500DA877B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -57,6 +67,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D074DD0B1AD2A719008EF8D1 /* CloudStorage */ = {
+			isa = PBXGroup;
+			children = (
+				D074DD131AD2A88D008EF8D1 /* Dropbox.cpp */,
+				D074DD141AD2A88D008EF8D1 /* Dropbox.h */,
+				D074DD1A1AD2B685008EF8D1 /* OneDrive.cpp */,
+				D074DD1B1AD2B685008EF8D1 /* OneDrive.h */,
+				D074DD1D1AD2B68F008EF8D1 /* Box.cpp */,
+				D074DD1E1AD2B68F008EF8D1 /* Box.h */,
+			);
+			name = CloudStorage;
+			sourceTree = "<group>";
+		};
 		D0FE2FF21AC9438500DA877B = {
 			isa = PBXGroup;
 			children = (
@@ -77,6 +100,7 @@
 		D0FE2FFD1AC9438500DA877B /* deduplicatus-cli */ = {
 			isa = PBXGroup;
 			children = (
+				D074DD0B1AD2A719008EF8D1 /* CloudStorage */,
 				D0FE2FFE1AC9438500DA877B /* main.cpp */,
 				D074DCEF1ACD1597008EF8D1 /* Config.cpp */,
 				D074DCF01ACD1597008EF8D1 /* Config.h */,
@@ -89,6 +113,7 @@
 				D074DCF81ACD3E7D008EF8D1 /* tool.cpp */,
 				D074DCF91ACD3E7D008EF8D1 /* tool.h */,
 				D074DCFD1ACD5E2F008EF8D1 /* define.h */,
+				D074DD201AD3BA13008EF8D1 /* CloudStorage.h */,
 			);
 			path = "deduplicatus-cli";
 			sourceTree = "<group>";
@@ -150,9 +175,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				D074DD071ACFC834008EF8D1 /* Level.cpp in Sources */,
+				D074DD1C1AD2B685008EF8D1 /* OneDrive.cpp in Sources */,
 				D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */,
+				D074DD151AD2A88D008EF8D1 /* Dropbox.cpp in Sources */,
 				D074DCF41ACD3127008EF8D1 /* WebAuth.cpp in Sources */,
 				D074DCF11ACD1597008EF8D1 /* Config.cpp in Sources */,
+				D074DD1F1AD2B68F008EF8D1 /* Box.cpp in Sources */,
 				D074DCFA1ACD3E7D008EF8D1 /* tool.cpp in Sources */,
 				D074DCF71ACD313C008EF8D1 /* FileOperation.cpp in Sources */,
 			);

@@ -105,7 +105,7 @@ int main(int argc, const char * argv[]) {
         if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
-            operationResult = fo->listCloud(db);
+            operationResult = fo->listCloud(db, wa);
             
             // ensure to close leveldb handler
             delete db;
