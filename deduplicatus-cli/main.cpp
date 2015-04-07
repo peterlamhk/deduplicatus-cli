@@ -29,7 +29,7 @@ int main(int argc, const char * argv[]) {
     FileOperation *fo = new FileOperation(c);
     bool operationFound = false;
     unsigned operationResult = ERR_NONE;
-    
+
     // exec: status
     if( !operationFound && argc == 2 && strcmp(argv[1], "status") == 0 ) {
         wa->showStatus();
@@ -37,7 +37,7 @@ int main(int argc, const char * argv[]) {
         operationFound = true;
         operationResult = ERR_NONE;
     }
-    
+
     // exec: signin <email> <password>
     if( !operationFound && argc == 4 && strcmp(argv[1], "signin") == 0 ) {
         operationFound = true;
@@ -47,7 +47,7 @@ int main(int argc, const char * argv[]) {
         if( wa->isAuth ) {
             cerr << "Error: Please sign out to continue." << endl;
             operationResult = ERR_ALREADY_SIGNIN;
-            
+
         } else {
             char * email = (char *) malloc(sizeof(char) * MAX_LEN_EMAIL);
             char * password = (char *) malloc(sizeof(char) * MAX_LEN_PASSWORD);
@@ -56,7 +56,7 @@ int main(int argc, const char * argv[]) {
 
             // sigin client and download leveldb in current folder
             operationResult = wa->signin(email, password);
-            
+
             if( operationResult != ERR_NONE ) {
                 // signout the account if there is a problem while locking leveldb
                 wa->signout(false);
@@ -68,12 +68,12 @@ int main(int argc, const char * argv[]) {
     if( !operationFound && argc == 2 && strcmp(argv[1], "signout") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        
+
         // reject if current status is not signed-in
         if( !wa->isAuth ) {
             cerr << "Error: User is not signed in." << endl;
             operationResult = ERR_NOT_SIGNIN;
-            
+
         } else {
             int dbNotSynced = 1;
             if( wa->isLock ) {
@@ -82,12 +82,12 @@ int main(int argc, const char * argv[]) {
             } else {
                 cerr << "Warning: LevelDB is not locked, local changes are discarded." << endl;
             }
-            
+
             // signout function will remove local leveldb if it is synced
             operationResult = wa->signout(dbNotSynced == 0);
         }
     }
-    
+
     // exec: sync
     if( !operationFound && argc == 2 && strcmp(argv[1], "sync") == 0 ) {
         operationFound = true;
@@ -97,7 +97,7 @@ int main(int argc, const char * argv[]) {
             operationResult = wa->sync();
         }
     }
-    
+
     if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -111,9 +111,35 @@ int main(int argc, const char * argv[]) {
             delete db;
         }
     }
-    
-    if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {}
-    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {}
+
+    if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
+      operationFound = true;
+      wa->getStatus();
+      if((operationResult = requireLocked(wa)) == ERR_NONE) {
+        Level *db = new Level();
+        db->open(c->user_lock);
+
+        string path = string(argv[2]);
+        operationResult = fo->listFile(db, path);
+
+        // ensure to close leveldb handler
+        delete db;
+      }
+    }
+    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+        if((operationResult = requireLocked(wa)) == ERR_NONE) {
+          Level *db = new Level();
+          db->open(c->user_lock);
+
+          string path = string(argv[2]);
+          operationResult = fo->listVersion(db, path);
+
+          // ensure to close leveldb handler
+          delete db;
+        }
+    }
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
@@ -137,7 +163,7 @@ int main(int argc, const char * argv[]) {
     }
     
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
-    
+
     // show usage if no operation is done
     if( !operationFound ) {
         showUsage(argv[0]);
@@ -146,7 +172,7 @@ int main(int argc, const char * argv[]) {
 
     // delete classess
     delete wa;
-    
+
     return operationResult;
 }
 
@@ -154,11 +180,11 @@ int requireLocked(WebAuth *wa) {
     if( !wa->isAuth ) {
         cerr << "Error: User is not signed in." << endl;
         return ERR_NOT_SIGNIN;
-        
+
     } else if( !wa->isLock ) {
         cerr << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
         return ERR_LEVEL_NOT_LOCKED;
-        
+
     } else {
         return ERR_NONE;
     }
@@ -166,10 +192,10 @@ int requireLocked(WebAuth *wa) {
 
 void showUsage(const char * path) {
     char * executable = basename((char *) path);
-    
+
     cout << "Command-line interface for DeDuplicatus." << endl;
     cout << endl;
-    
+
     cout << "Usage (General):" << endl;
     cout << "\t" << executable << " status" << endl;
     cout << "\t" << executable << " signin <email> <password>" << endl;
@@ -202,7 +228,7 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " mkdir <path>" << endl;
     cout << "\t" << executable << " rmdir <path>" << endl;
     cout << endl;
-    
+
     cout << "Caution:" << endl;
     cout << "\t! LevelDB files save at current folder." << endl;
     cout << "\t! Ensure to sync or sign out after all file operations. Otherwise the file system won't be saved." << endl;
