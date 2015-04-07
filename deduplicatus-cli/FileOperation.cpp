@@ -29,7 +29,7 @@ FileOperation::FileOperation(Config *c) {
 
 int FileOperation::listCloud(Level *db, WebAuth *wa) {
     // in this function, no need to separate codes for two storage modes
-    cout << "Provider\tDisplay Name\tUsed\tQuota" << endl;
+    cout << "Cloud ID\t\t\t\tProvider\tDisplay Name\tUsed\tQuota" << endl;
     
     // iterate the list of cloud to get account info
     leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
@@ -60,7 +60,8 @@ int FileOperation::listCloud(Level *db, WebAuth *wa) {
                 cloud->displayName :
                 db->get("clouds::account::" + cloudid + "::accountName");
             
-            cout << cloud->brandName() << "\t" <<
+            cout << cloudid << "\t" <<
+                cloud->brandName() << "\t" <<
                 displayName << "\t" <<
                 readable_fs(cloud->space_used, buf) << "\t" <<
                 readable_fs(cloud->space_quota, buf) << endl;
