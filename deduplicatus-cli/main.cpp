@@ -15,7 +15,6 @@
 #include "FileOperation.h"
 #include "define.h"
 #include "tool.h"
-#include <CommonCrypto/CommonDigest.h>
 
 using namespace std;
 
