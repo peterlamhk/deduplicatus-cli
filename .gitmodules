@@ -4,3 +4,6 @@
 [submodule "leveldb"]
 	path = leveldb
 	url = https://github.com/google/leveldb.git
+[submodule "librabinpoly"]
+	path = librabinpoly
+	url = https://github.com/mkc188/librabinpoly.git

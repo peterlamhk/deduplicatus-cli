@@ -17,6 +17,7 @@
 		D074DD1C1AD2B685008EF8D1 /* OneDrive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1A1AD2B685008EF8D1 /* OneDrive.cpp */; };
 		D074DD1F1AD2B68F008EF8D1 /* Box.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D074DD1D1AD2B68F008EF8D1 /* Box.cpp */; };
 		D074DD221AD3D5F7008EF8D1 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D074DD211AD3D5F7008EF8D1 /* CoreFoundation.framework */; };
+		D0D128C51AD5393B00709F4A /* rabinpoly.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D128C31AD5393B00709F4A /* rabinpoly.c */; };
 		D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0FE2FFE1AC9438500DA877B /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -53,6 +54,8 @@
 		D074DD1E1AD2B68F008EF8D1 /* Box.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Box.h; sourceTree = "<group>"; };
 		D074DD201AD3BA13008EF8D1 /* CloudStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CloudStorage.h; sourceTree = "<group>"; };
 		D074DD211AD3D5F7008EF8D1 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		D0D128C31AD5393B00709F4A /* rabinpoly.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rabinpoly.c; path = rabinpoly/rabinpoly.c; sourceTree = SOURCE_ROOT; };
+		D0D128C41AD5393B00709F4A /* rabinpoly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rabinpoly.h; path = rabinpoly/rabinpoly.h; sourceTree = SOURCE_ROOT; };
 		D0FE2FFB1AC9438500DA877B /* deduplicatus-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "deduplicatus-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FE2FFE1AC9438500DA877B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -106,6 +109,7 @@
 			children = (
 				D074DD0B1AD2A719008EF8D1 /* CloudStorage */,
 				D0FE2FFE1AC9438500DA877B /* main.cpp */,
+				D074DD201AD3BA13008EF8D1 /* CloudStorage.h */,
 				D074DCEF1ACD1597008EF8D1 /* Config.cpp */,
 				D074DCF01ACD1597008EF8D1 /* Config.h */,
 				D074DD051ACFC834008EF8D1 /* Level.cpp */,
@@ -117,7 +121,8 @@
 				D074DCF81ACD3E7D008EF8D1 /* tool.cpp */,
 				D074DCF91ACD3E7D008EF8D1 /* tool.h */,
 				D074DCFD1ACD5E2F008EF8D1 /* define.h */,
-				D074DD201AD3BA13008EF8D1 /* CloudStorage.h */,
+				D0D128C31AD5393B00709F4A /* rabinpoly.c */,
+				D0D128C41AD5393B00709F4A /* rabinpoly.h */,
 			);
 			path = "deduplicatus-cli";
 			sourceTree = "<group>";
@@ -182,6 +187,7 @@
 				D074DD1C1AD2B685008EF8D1 /* OneDrive.cpp in Sources */,
 				D0FE2FFF1AC9438500DA877B /* main.cpp in Sources */,
 				D074DD151AD2A88D008EF8D1 /* Dropbox.cpp in Sources */,
+				D0D128C51AD5393B00709F4A /* rabinpoly.c in Sources */,
 				D074DCF41ACD3127008EF8D1 /* WebAuth.cpp in Sources */,
 				D074DCF11ACD1597008EF8D1 /* Config.cpp in Sources */,
 				D074DD1F1AD2B68F008EF8D1 /* Box.cpp in Sources */,
@@ -278,12 +284,14 @@
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
+					/usr/local/Cellar/libtomcrypt/1.17/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/leveldb",
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
+					/usr/local/Cellar/libtomcrypt/1.17/lib,
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
@@ -297,6 +305,7 @@
 					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
+					"-ltomcrypt",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
@@ -315,12 +324,14 @@
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
+					/usr/local/Cellar/libtomcrypt/1.17/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/leveldb",
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
+					/usr/local/Cellar/libtomcrypt/1.17/lib,
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
@@ -334,6 +345,7 @@
 					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
+					"-ltomcrypt",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
