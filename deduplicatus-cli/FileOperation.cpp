@@ -9,9 +9,6 @@
 #include <iostream>
 #include <string>
 #include <regex>
-#include "FileOperation.h"
-#include "Level.h"
-#include "define.h"
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -27,9 +24,6 @@
 #include "define.h"
 #include "tool.h"
 
-#define NUM_FOLDER_KEY 2
-#define NUM_FILE_KEY 5
-#define NUM_VERSION_KEY 3
 using namespace std;
 
 FileOperation::FileOperation(Config *c) {
@@ -61,12 +55,13 @@ int FileOperation::listFile(Level *db, string path) {
                 smatch match;
                 if (regex_search(s, match, rgx)) {
                     folderName = match[1];
-                }
-                if (!pwd) {
-                    printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
-                    pwd = true;
-                } else {
-                    printf("%s\t%s\t0\t%s\n", date, folderName.c_str(), folderuuid.c_str());
+
+                    if (!pwd) {
+                        printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
+                        pwd = true;
+                    } else {
+                        printf("%s\t%s\t0\t%s\n", date, folderName.c_str(), folderuuid.c_str());
+                    }
                 }
             }
         }

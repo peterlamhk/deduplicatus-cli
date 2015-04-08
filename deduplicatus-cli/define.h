@@ -38,4 +38,8 @@
 
 #define MAX_FILE_READ_SIZE 4096
 
+#define NUM_FOLDER_KEY 2
+#define NUM_FILE_KEY 5
+#define NUM_VERSION_KEY 3
+
 #endif
