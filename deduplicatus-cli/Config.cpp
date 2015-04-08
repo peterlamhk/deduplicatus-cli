@@ -25,8 +25,7 @@ Config::Config() {
     mode_file_manager = "file-manager";
     mode_deduplication = "deduplication";
     
-//    web_front = "https://deduplicatus.retepmal.com";
-    web_front = "http://localhost";
+    web_front = "https://deduplicatus.retepmal.com";
     path_status = "/client/status";
     path_signin = "/client/signin";
     path_signout = "/client/signout";
