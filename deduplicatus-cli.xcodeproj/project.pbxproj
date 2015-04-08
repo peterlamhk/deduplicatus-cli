@@ -289,6 +289,14 @@
 					"-lcurl",
 					"-I\"rapidjson/include\"",
 					"-lboost_system",
+					"-lboost_system-mt",
+					"-lboost_filesystem-mt",
+					"-lboost_thread-mt",
+					"-lcppnetlib-client-connections",
+					"-lcppnetlib-uri",
+					"-lcppnetlib-server-parsers",
+					"-lssl",
+					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
@@ -318,6 +326,14 @@
 					"-lcurl",
 					"-I\"rapidjson/include\"",
 					"-lboost_system",
+					"-lboost_system-mt",
+					"-lboost_filesystem-mt",
+					"-lboost_thread-mt",
+					"-lcppnetlib-client-connections",
+					"-lcppnetlib-uri",
+					"-lcppnetlib-server-parsers",
+					"-lssl",
+					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
