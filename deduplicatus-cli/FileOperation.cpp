@@ -15,6 +15,8 @@
 #include <regex>
 #include <time.h>
 #include <libgen.h>
+#include <vector>
+#include <tbb/tbb.h>
 #include "FileOperation.h"
 #include "WebAuth.h"
 #include "Level.h"
@@ -213,5 +215,24 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 }
 
 int FileOperation::putFile(Level *db, string local, string remote) {
+    tbb::concurrent_vector<string> chunk_list;
+
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        chunk_list.push_back("haha");
+        chunk_list.push_back("hehe");
+        chunk_list.push_back("fuckyou");
+        for (auto foo : chunk_list) {
+            cout << foo << endl;
+        }
+
+        string cloudid = "daee407c-4e50-4bd3-acaa-968a98536890";
+        CloudStorage *cloud = new Dropbox(db->get("clouds::account::" + cloudid + "::accessToken"));
+
+        cloud->uploadFile(local, remote);
+
+    } else {
+
+    }
+
     return ERR_NONE;
 }

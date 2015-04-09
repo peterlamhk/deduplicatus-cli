@@ -20,6 +20,7 @@ public:
     static string type() { return "dropbox"; }
     string brandName() override;
     void accountInfo(Level *, WebAuth *, string) override;
+    void uploadFile(string, string) override;
 
 private:
     string path_base;
