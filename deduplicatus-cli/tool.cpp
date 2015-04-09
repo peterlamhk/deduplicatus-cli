@@ -14,8 +14,9 @@
 #include <string>
 #include <curl/curl.h>
 #include <sys/stat.h>
-#include <CommonCrypto/CommonDigest.h>
-#include <CoreFoundation/CFUUID.h>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <tomcrypt.h>
 
 using namespace std;
 
@@ -44,32 +45,32 @@ string sha1_file(const char *filename) {
     FILE *fp = fopen(filename, "rb");
     int eof = 0;
     unsigned char buf[MAX_FILE_READ_SIZE];
-    
-    CC_SHA1_CTX ctx;
-    CC_SHA1_Init(&ctx);
-    
+    unsigned char* hashResult = (unsigned char *) malloc(sizeof(unsigned char) * sha1_desc.hashsize);
+
+    hash_state md;
+    sha1_init(&md);
+
     while( !eof ) {
         unsigned long fread_size = fread(buf, 1, MAX_FILE_READ_SIZE, fp);
         if( fread_size < MAX_FILE_READ_SIZE ) {
             eof = 1;
         }
-        CC_SHA1_Update(&ctx, &buf, (unsigned int) fread_size);
+        sha1_process(&md, buf, (unsigned int) fread_size);
     }
-    
+
     // close file handler
     fclose(fp);
-    
-    unsigned char *digest = (unsigned char *) malloc(sizeof(unsigned char) * CC_SHA1_DIGEST_LENGTH);
-    char *result = (char *) malloc(sizeof(char) * CC_SHA1_DIGEST_LENGTH * 2);
-    CC_SHA1_Final(digest, &ctx);
-    
-    for(int b = 0; b < CC_SHA1_DIGEST_LENGTH; b++) {
-        sprintf(&result[b * 2], "%02x", digest[b]);
+
+    sha1_done(&md, hashResult);
+
+    char *result = (char *) malloc(sizeof(char) * sha1_desc.hashsize * 2);
+    for (int b = 0; b < 20; b++) {
+        sprintf(&result[b * 2], "%02x", hashResult[b]);
     }
 
     // free memory
-    free(digest);
-    
+    delete[] hashResult;
+
     return (string) result;
 }
 
@@ -85,33 +86,9 @@ char* readable_fs(uint64_t size/*in bytes*/, char *buf) {
     return buf;
 }
 
-char * MYCFStringCopyUTF8String(CFStringRef aString) {
-    if (aString == NULL) {
-        return NULL;
-    }
-    
-    CFIndex length = CFStringGetLength(aString);
-    CFIndex maxSize =
-    CFStringGetMaximumSizeForEncoding(length,
-                                      kCFStringEncodingUTF8);
-    char *buffer = (char *)malloc(maxSize);
-    if (CFStringGetCString(aString, buffer, maxSize,
-                           kCFStringEncodingUTF8)) {
-        return buffer;
-    }
-    return NULL;
-}
-
 string uuid() {
-    auto guid = CFUUIDCreate(NULL);
-    auto bytes = CFUUIDCreateString(NULL, guid);
-    CFRelease(guid);
+    boost::uuids::random_generator gen;
+    boost::uuids::uuid u = gen();
 
-    string result = (string) MYCFStringCopyUTF8String(bytes);
-    for( int i = 0; i < result.length(); i++ ) {
-        result[i] = tolower(result[i]);
-    }
-    
-    return result;
+    return boost::uuids::to_string(u);
 }
-
