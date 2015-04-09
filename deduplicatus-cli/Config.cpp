@@ -7,7 +7,6 @@
 //
 
 #include <string>
-#include <fstream>
 #include "rapidjson/document.h"
 #include "Config.h"
 #include "tool.h"
