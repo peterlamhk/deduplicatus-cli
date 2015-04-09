@@ -14,8 +14,8 @@
 #include <string>
 #include <curl/curl.h>
 #include <sys/stat.h>
-#include <CommonCrypto/CommonDigest.h>
 #include <CoreFoundation/CFUUID.h>
+#include <tomcrypt.h>
 
 using namespace std;
 
@@ -44,32 +44,32 @@ string sha1_file(const char *filename) {
     FILE *fp = fopen(filename, "rb");
     int eof = 0;
     unsigned char buf[MAX_FILE_READ_SIZE];
-    
-    CC_SHA1_CTX ctx;
-    CC_SHA1_Init(&ctx);
-    
+    unsigned char* hashResult = (unsigned char *) malloc(sizeof(unsigned char) * sha1_desc.hashsize);
+
+    hash_state md;
+    sha1_init(&md);
+
     while( !eof ) {
         unsigned long fread_size = fread(buf, 1, MAX_FILE_READ_SIZE, fp);
         if( fread_size < MAX_FILE_READ_SIZE ) {
             eof = 1;
         }
-        CC_SHA1_Update(&ctx, &buf, (unsigned int) fread_size);
+        sha1_process(&md, buf, (unsigned int) fread_size);
     }
-    
+
     // close file handler
     fclose(fp);
-    
-    unsigned char *digest = (unsigned char *) malloc(sizeof(unsigned char) * CC_SHA1_DIGEST_LENGTH);
-    char *result = (char *) malloc(sizeof(char) * CC_SHA1_DIGEST_LENGTH * 2);
-    CC_SHA1_Final(digest, &ctx);
-    
-    for(int b = 0; b < CC_SHA1_DIGEST_LENGTH; b++) {
-        sprintf(&result[b * 2], "%02x", digest[b]);
+
+    sha1_done(&md, hashResult);
+
+    char *result = (char *) malloc(sizeof(char) * sha1_desc.hashsize * 2);
+    for (int b = 0; b < 20; b++) {
+        sprintf(&result[b * 2], "%02x", hashResult[b]);
     }
 
     // free memory
-    free(digest);
-    
+    delete[] hashResult;
+
     return (string) result;
 }
 
