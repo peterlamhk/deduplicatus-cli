@@ -211,3 +211,7 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 
     return ERR_NONE;
 }
+
+int FileOperation::putFile(Level *db, string local, string remote) {
+    return ERR_NONE;
+}

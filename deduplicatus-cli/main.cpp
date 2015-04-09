@@ -30,7 +30,7 @@ int main(int argc, const char * argv[]) {
     unsigned operationResult = ERR_NONE;
 
     // exec: status
-    if( !operationFound && argc == 2 && strcmp(argv[1], "status") == 0 ) {
+    if ( !operationFound && argc == 2 && strcmp(argv[1], "status") == 0 ) {
         wa->showStatus();
 
         operationFound = true;
@@ -38,12 +38,12 @@ int main(int argc, const char * argv[]) {
     }
 
     // exec: signin <email> <password>
-    if( !operationFound && argc == 4 && strcmp(argv[1], "signin") == 0 ) {
+    if ( !operationFound && argc == 4 && strcmp(argv[1], "signin") == 0 ) {
         operationFound = true;
         wa->getStatus();
 
         // reject if current status is signed-in
-        if( wa->isAuth ) {
+        if ( wa->isAuth ) {
             cerr << "Error: Please sign out to continue." << endl;
             operationResult = ERR_ALREADY_SIGNIN;
 
@@ -56,7 +56,7 @@ int main(int argc, const char * argv[]) {
             // sigin client and download leveldb in current folder
             operationResult = wa->signin(email, password);
 
-            if( operationResult != ERR_NONE ) {
+            if ( operationResult != ERR_NONE ) {
                 // signout the account if there is a problem while locking leveldb
                 wa->signout(false);
             }
@@ -64,18 +64,18 @@ int main(int argc, const char * argv[]) {
     }
 
     // exec: signout
-    if( !operationFound && argc == 2 && strcmp(argv[1], "signout") == 0 ) {
+    if ( !operationFound && argc == 2 && strcmp(argv[1], "signout") == 0 ) {
         operationFound = true;
         wa->getStatus();
 
         // reject if current status is not signed-in
-        if( !wa->isAuth ) {
+        if ( !wa->isAuth ) {
             cerr << "Error: User is not signed in." << endl;
             operationResult = ERR_NOT_SIGNIN;
 
         } else {
             int dbNotSynced = 1;
-            if( wa->isLock ) {
+            if ( wa->isLock ) {
                 dbNotSynced = wa->sync();
                 wa->unlock();
             } else {
@@ -88,83 +88,98 @@ int main(int argc, const char * argv[]) {
     }
 
     // exec: sync
-    if( !operationFound && argc == 2 && strcmp(argv[1], "sync") == 0 ) {
+    if ( !operationFound && argc == 2 && strcmp(argv[1], "sync") == 0 ) {
         operationFound = true;
         wa->getStatus();
 
-        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             operationResult = wa->sync();
         }
     }
 
-    if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
+    if ( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        
-        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = fo->listCloud(db, wa);
-            
+
             // ensure to close leveldb handler
             delete db;
         }
     }
 
-    if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
-      operationFound = true;
-      wa->getStatus();
-      if((operationResult = requireLocked(wa)) == ERR_NONE) {
-        Level *db = new Level();
-        db->open(c->user_lock);
-
-        string path = string(argv[2]);
-        operationResult = fo->listFile(db, path);
-
-        // ensure to close leveldb handler
-        delete db;
-      }
-    }
-    if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
+    if ( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        if((operationResult = requireLocked(wa)) == ERR_NONE) {
-          Level *db = new Level();
-          db->open(c->user_lock);
+        if ((operationResult = requireLocked(wa)) == ERR_NONE) {
+            Level *db = new Level();
+            db->open(c->user_lock);
 
-          string path = string(argv[2]);
-          operationResult = fo->listVersion(db, path);
+            string path = string(argv[2]);
+            operationResult = fo->listFile(db, path);
 
-          // ensure to close leveldb handler
-          delete db;
+            // ensure to close leveldb handler
+            delete db;
         }
     }
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
-    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
-    
-    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
+    if ( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        
-        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if ((operationResult = requireLocked(wa)) == ERR_NONE) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+
+            string path = string(argv[2]);
+            operationResult = fo->listVersion(db, path);
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+        if ((operationResult = requireLocked(wa)) == ERR_NONE) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+
+            string local = string(argv[2]);
+            string remote = string(argv[3]);
+            operationResult = fo->putFile(db, local, remote);
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+
+    }
+    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
+    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
+    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
+    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
+
+    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 3 ) ?
-                fo->makeDirectory(db, argv[2], "") :     // Deduplication-enabled Mode
-                fo->makeDirectory(db, argv[2], argv[3]); // File Manager Mode
-            
+                              fo->makeDirectory(db, argv[2], "") :     // Deduplication-enabled Mode
+                              fo->makeDirectory(db, argv[2], argv[3]); // File Manager Mode
+
             // ensure to close leveldb handler
             delete db;
         }
     }
-    
-    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
+
+    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
 
     // show usage if no operation is done
-    if( !operationFound ) {
+    if ( !operationFound ) {
         showUsage(argv[0]);
         cout << argv[0] << endl;
     }
@@ -176,11 +191,11 @@ int main(int argc, const char * argv[]) {
 }
 
 int requireLocked(WebAuth *wa) {
-    if( !wa->isAuth ) {
+    if ( !wa->isAuth ) {
         cerr << "Error: User is not signed in." << endl;
         return ERR_NOT_SIGNIN;
 
-    } else if( !wa->isLock ) {
+    } else if ( !wa->isLock ) {
         cerr << "Error: Can't perform any this operation because LevelDB is not locked." << endl;
         return ERR_LEVEL_NOT_LOCKED;
 
@@ -203,7 +218,7 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " ls-cloud" << endl;
     cout << endl;
 
-    if( FILE_MANAGER_ENABLED ) {
+    if ( FILE_MANAGER_ENABLED ) {
         cout << "Usage (File Manager Mode):" << endl;
         cout << "\t" << executable << " ls <path>" << endl;
         cout << "\t" << executable << " put <local> <remote> <cloud-id>" << endl;
