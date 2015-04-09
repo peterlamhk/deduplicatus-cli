@@ -225,6 +225,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
 
         // check remote file exists
+        string filehash = sha1_file(path);
         string filedir = dirname((char *) remotepath);
         string filename = basename((char *) remotepath);
         string folderid;
@@ -374,6 +375,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         stringstream filesize;
         filesize << total_bytes;
         batch.Put("version::" + versionid + "::size", filesize.str());
+        batch.Put("version::" + versionid + "::checksum", filehash);
 
         cout << "Original File Size (bytes):      " << total_bytes << endl;
         cout << "Total Unique Chunk Size (bytes): " << unique_bytes << endl;
@@ -467,6 +469,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         batch.Put("file::" + folderid + "::" + filename + "::lastVersion", versionid);
         batch.Put("file::" + folderid + "::" + filename + "::timestamp", timestamp.str());
         batch.Put("file::" + folderid + "::" + filename + "::lastSize", filesize.str());
+        batch.Put("file::" + folderid + "::" + filename + "::lastChecksum", filehash);
 
         // remove all maps and vectors if no longer needed
         countInFile.clear();
