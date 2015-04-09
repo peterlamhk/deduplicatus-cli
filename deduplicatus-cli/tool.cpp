@@ -14,7 +14,8 @@
 #include <string>
 #include <curl/curl.h>
 #include <sys/stat.h>
-#include <CoreFoundation/CFUUID.h>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <tomcrypt.h>
 
 using namespace std;
@@ -85,33 +86,9 @@ char* readable_fs(uint64_t size/*in bytes*/, char *buf) {
     return buf;
 }
 
-char * MYCFStringCopyUTF8String(CFStringRef aString) {
-    if (aString == NULL) {
-        return NULL;
-    }
-    
-    CFIndex length = CFStringGetLength(aString);
-    CFIndex maxSize =
-    CFStringGetMaximumSizeForEncoding(length,
-                                      kCFStringEncodingUTF8);
-    char *buffer = (char *)malloc(maxSize);
-    if (CFStringGetCString(aString, buffer, maxSize,
-                           kCFStringEncodingUTF8)) {
-        return buffer;
-    }
-    return NULL;
-}
-
 string uuid() {
-    auto guid = CFUUIDCreate(NULL);
-    auto bytes = CFUUIDCreateString(NULL, guid);
-    CFRelease(guid);
+    boost::uuids::random_generator gen;
+    boost::uuids::uuid u = gen();
 
-    string result = (string) MYCFStringCopyUTF8String(bytes);
-    for( int i = 0; i < result.length(); i++ ) {
-        result[i] = tolower(result[i]);
-    }
-    
-    return result;
+    return boost::uuids::to_string(u);
 }
-
