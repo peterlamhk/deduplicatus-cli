@@ -125,6 +125,7 @@ int main(int argc, const char * argv[]) {
         delete db;
       }
     }
+
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -139,7 +140,23 @@ int main(int argc, const char * argv[]) {
           delete db;
         }
     }
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {}
+
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 3 ) ?
+                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
+                fo->putFile(db, argv[2], argv[3], argv[4]); // File Manager Mode
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}

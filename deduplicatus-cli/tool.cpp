@@ -11,6 +11,7 @@
 #include "tool.h"
 #include "define.h"
 #include <stdlib.h>
+#include <dirent.h>
 #include <string>
 #include <curl/curl.h>
 #include <sys/stat.h>
@@ -69,7 +70,7 @@ string sha1_file(const char *filename) {
     }
 
     // free memory
-    delete[] hashResult;
+    free(hashResult);
 
     return (string) result;
 }
@@ -91,4 +92,56 @@ string uuid() {
     boost::uuids::uuid u = gen();
 
     return boost::uuids::to_string(u);
+}
+
+int createDirectory(string directory, bool warnExists) {
+    // create user's directory using lockid as name, error if exists
+    DIR* dir = opendir(directory.c_str());
+    if( dir ) {
+        if( warnExists ) {
+            // directory exists
+            cerr << "Error: Directory in use." << endl;
+            closedir(dir);
+            return ERR_LOCAL_ERROR;
+        }
+
+    } else if( ENOENT == errno ) {
+        if( mkdir(directory.c_str(), S_IRWXU) != 0 ) {
+            cerr << "Error: Can't create directory." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+    } else {
+        cerr << "Error: Local file permission denied." << endl;
+        return ERR_LOCAL_ERROR;
+    }
+    free(dir);
+
+    return ERR_NONE;
+}
+
+int removeDirectory(string directory) {
+    // read directory and remove files inside
+    DIR *dir;
+    struct dirent *dirp;
+
+    if( (dir = opendir(directory.c_str())) == NULL ) {
+        return ERR_LOCAL_ERROR;
+    }
+
+    while( (dirp = readdir(dir)) != NULL ) {
+        if( dirp->d_name[0] == '.' ) {
+            // skip if it is a hidden file
+            continue;
+        }
+        string path = directory + "/" + string(dirp->d_name);
+        remove(path.c_str());
+    }
+    closedir(dir);
+    free(dirp);
+
+    // remove the directory itself
+    remove(directory.c_str());
+
+    return ERR_NONE;
 }

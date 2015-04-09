@@ -23,4 +23,6 @@ void set_header_postform(struct curl_slist *);
 void set_header_postjson(struct curl_slist *);
 char* readable_fs(uint64_t, char *);
 string uuid();
+int createDirectory(string, bool);
+int removeDirectory(string);
 #endif /* defined(__deduplicatus_cli__tool__) */

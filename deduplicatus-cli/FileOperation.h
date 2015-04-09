@@ -24,6 +24,7 @@ public:
     int listVersion(Level *, string);
     int listCloud(Level *, WebAuth *);
     int makeDirectory(Level *, const char *, const char *);
+    int putFile(Level *, const char *, const char *, const char *);
 
 private:
     Config *c;
