@@ -97,6 +97,7 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: ls-cloud
     if( !operationFound && argc == 2 && strcmp(argv[1], "ls-cloud") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -111,6 +112,19 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: repair
+    if( !operationFound && argc == 2 && strcmp(argv[1], "repair") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if((operationResult = requireLocked(wa)) == ERR_NONE) {
+            leveldb::RepairDB(c->user_lock, leveldb::Options());
+            cout << "LevelDB (" + c->user_lock + "/) repaired." << endl;
+            return ERR_NONE;
+        }
+    }
+
+    // exec: ls
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
       operationFound = true;
       wa->getStatus();
@@ -125,6 +139,8 @@ int main(int argc, const char * argv[]) {
         delete db;
       }
     }
+
+    // exec: ls-version
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -144,7 +160,8 @@ int main(int argc, const char * argv[]) {
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
-    
+
+    // exec: mkdir
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -201,6 +218,7 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " signout" << endl;
     cout << "\t" << executable << " sync" << endl;
     cout << "\t" << executable << " ls-cloud" << endl;
+    cout << "\t" << executable << " repair" << endl;
     cout << endl;
 
     if( FILE_MANAGER_ENABLED ) {
