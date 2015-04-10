@@ -96,6 +96,9 @@ void Box::accountInfo(Level *db, WebAuth *wa, string cloudid) {
 
 void Box::uploadFile(string local, string remote) {
     http::client client;
+    string boundary = "foo_bar_baz";
+    string contentType = "multipart/form-data; boundary=" + boundary;
+    string requestBody;
     try {
         fs::path lp(local);
         if (!remote.empty() && remote.back() != '/')
@@ -103,7 +106,18 @@ void Box::uploadFile(string local, string remote) {
         string rp = "https://api-content.dropbox.com/1/files_put/auto" + remote + lp.filename().string();
         http::client::request request(rp);
         request << boost::network::header("Authorization", "Bearer " + accessToken);
-        http::client::response response = client.post(request, get_file_contents(local.c_str()));
+        request << boost::network::header("Content-Type", contentType);
+        requestBody += "--" + boundary + "\r\n";
+        requestBody += "Content-Disposition: form-data; name=\"attributes\"\r\n\r\n";
+        requestBody += "{\"name\":\"" + lp.filename().string() + "\", \"parent\":{\"id\":\"0\"}}\r\n";
+        requestBody += "--" + boundary + "\r\n";
+        requestBody += "Content-Disposition: form-data; name=\"file\"; filename=\"" + lp.filename().string() + "\"\r\n";
+        requestBody += "Content-Type: application/octet-stream\r\n\r\n";
+        requestBody += get_file_contents(local.c_str());
+        requestBody += "\r\n--" + boundary + "--\r\n";
+        cout << requestBody << endl;
+        http::client::response response = client.post(request, requestBody);
+        cout << body(response) << endl;
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;
