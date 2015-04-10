@@ -13,6 +13,8 @@ struct Chunk {
     unsigned long long start;
     unsigned long long size;
     char *checksum;
+    char *container;
+    unsigned long long containerStart;
 };
 
 #endif

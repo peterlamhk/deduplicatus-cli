@@ -6,9 +6,6 @@
 //  Copyright (c) 2015 Peter Lam. All rights reserved.
 //
 
-#include <iostream>
-#include <string>
-#include <regex>
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -410,10 +407,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
                 string cs = (string) it->checksum;
 
                 fseek(targetFile, it->start, SEEK_SET);
-                fread_size = fread(buf, 1, it->size, targetFile);
-
-                // free the read buffer
-                free(buf);
+                fread_size = fread(buf, sizeof(unsigned char), it->size, targetFile);
 
                 // write chunk location in container to leveldb
                 chunkString.str(""); chunkString << currentContainerSize;
@@ -424,8 +418,12 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
                 batch.Put("container::" + containerid + "::chunks::" + cs + "::referenceCount", chunkString.str());
                 batch.Put("chunks::" + cs + "::container", containerid);
 
+                fseek(containerFile, currentContainerSize, SEEK_SET);
                 fwrite(buf, sizeof(unsigned char), fread_size, containerFile);
                 currentContainerSize = currentContainerSize + fread_size;
+
+                // free the read buffer
+                free(buf);
 
                 if( currentContainerSize >= AVG_CONTAINER_SIZE || uniqueChunkCount == 0 ) {
                     // close container and save to leveldb
@@ -498,6 +496,168 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
             cerr << "Error: can't save file information into leveldb." << endl;
             return ERR_LEVEL_CORRUPTED;
         }
+
+    } else { }
+
+    return ERR_NONE;
+}
+
+int FileOperation::getFile(Level *db, const char *remote, const char *local, const char *reference) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        string filedir = dirname((char *) remote);
+        string filename = basename((char *) remote);
+        string folderid;
+        string versionid;
+
+        // search for the correct folderid and versionid
+        if( db->isKeyExists("folder::" + filedir + "::id") ) {
+            folderid = db->get("folder::" + filedir + "::id");
+
+            if( db->isKeyExists("file::" + folderid + "::" + filename + "::name") ) {
+                versionid = (reference == NULL) ? db->get("file::" + folderid + "::" + filename + "::lastVersion") : (string) reference;
+            } else {
+                cerr << "Error: remote file not found." << endl;
+                return ERR_CLOUD_ERROR;
+            }
+        } else {
+            cerr << "Error: remote file not found." << endl;
+            return ERR_CLOUD_ERROR;
+        }
+
+        // search if the target version exists
+        if( !db->isKeyExists("version::" + versionid + "::checksum") ) {
+            cerr << "Error: file version not found." << endl;
+            return ERR_CLOUD_ERROR;
+        }
+
+        // obtain filesize
+        unsigned long long filesize;
+        {
+            char *filesizeString = (char *) db->get("version::" + versionid + "::size").c_str();
+            filesize = strtoul(filesizeString, NULL, 0);
+        }
+
+        // check local file exists
+        FILE * localFile = fopen(local, "wb");
+        if( localFile == NULL ) {
+            cerr << "Error: local file can't be written." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+        {
+            unsigned long long remaining = filesize;
+            char *emptyContent = (char *) malloc(sizeof(char) * MAX_FILE_READ_SIZE);
+            while( remaining > 0 ) {
+                unsigned long long writesize = ( remaining > MAX_FILE_READ_SIZE ) ? MAX_FILE_READ_SIZE : remaining;
+                unsigned long long actually = fwrite(emptyContent, sizeof(char), remaining, localFile);
+
+                if( actually != writesize ) {
+                    cerr << "Error: insufficient disk space." << endl;
+                    return ERR_LOCAL_ERROR;
+                }
+                remaining -= writesize;
+            }
+            free(emptyContent);
+        }
+
+        // obtain chunk list in version
+        string chunks = db->get("version::" + versionid + "::chunks");
+
+        // iterate chunks to get all container id needed
+        char *ch = (char *) chunks.c_str();
+        char *p = strtok(ch, ";[]");
+
+        unsigned long long currentPosition = 0;
+        map<string, vector<Chunk>> chunkInContainerOrder;
+
+        while( p != NULL ) {
+            string chunkHash = (string) p;
+            string containerid = db->get("chunks::" + chunkHash + "::container");
+
+            Chunk *chk = (Chunk *) malloc(sizeof(Chunk));
+            chk->container = (char *) containerid.c_str();
+            chk->start = currentPosition;
+            chk->containerStart = strtoul(db->get("container::" + containerid + "::chunks::" + chunkHash + "::start").c_str(), NULL, 0);
+            chk->size = strtoul(db->get("container::" + containerid + "::chunks::" + chunkHash + "::size").c_str(), NULL, 0);
+
+            if( chunkInContainerOrder.count(containerid) == 0 ) {
+                chunkInContainerOrder.insert(pair<string, vector<Chunk>>(containerid, vector<Chunk>()));
+            }
+            chunkInContainerOrder[containerid].push_back(*chk);
+
+            currentPosition += chk->size;
+            p = strtok(NULL, ";[]");
+        }
+
+        // find the required container id in local cache folder,
+        // otherwise download from cloud storage
+        vector<string> containerNeeded;
+        for( map<string, vector<Chunk>>::iterator it = chunkInContainerOrder.begin();
+            it != chunkInContainerOrder.end(); ++it) {
+            containerNeeded.push_back(it->first);
+        }
+
+        {
+            vector<string>::const_iterator it = containerNeeded.begin();
+            while( it != containerNeeded.end() ) {
+                if( file_exists(c->user_lock + "-cache/" + *it + ".container") ) {
+                    containerNeeded.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+
+        // -- debug use only: list containers needed to download
+        cout << "Container Needed" << endl;
+        {
+            vector<string>::const_iterator it = containerNeeded.begin();
+            while( it != containerNeeded.end() ) {
+                cout << *it << endl;
+                ++it;
+            }
+        }
+        cout << "----------------" << endl << endl;
+
+        // iterate container to merge back the file
+        unsigned char *buf;
+        unsigned long fread_size;
+
+        for( map<string, vector<Chunk>>::iterator it = chunkInContainerOrder.begin();
+            it != chunkInContainerOrder.end(); ++it) {
+            // take one container to open
+            vector<Chunk> chunks = it->second;
+            string containerPath = c->user_lock + "-cache/" + it->first + ".container";
+            FILE * containerFp = fopen(containerPath.c_str(), "rb");
+
+            // loop all chunks required in this container
+            vector<Chunk>::iterator itc = chunks.begin();
+            while( itc != chunks.end() ) {
+
+                // seek to file location in container to read specific chunk size
+                fseek(containerFp, itc->containerStart, SEEK_SET);
+                buf = (unsigned char *) malloc(sizeof(unsigned char *) * itc->size);
+                fread_size = fread(buf, 1, itc->size, containerFp);
+
+                // seek to file location in resulting file to write chunk
+                fseek(localFile, itc->start, SEEK_SET);
+                fwrite(buf, sizeof(unsigned char), itc->size, localFile);
+
+                ++itc;
+            }
+
+            fclose(containerFp);
+        }
+
+        // close file handler
+        fclose(localFile);
+
+        // double check the checksum of the original file
+        string filehash = db->get("version::" + versionid + "::checksum");
+        if( filehash.compare(sha1_file(local)) != 0 ) {
+            cerr << "Error: incorrect file content merged." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+        cout << "Success downloaded file to " << local << endl;
 
     } else { }
 
