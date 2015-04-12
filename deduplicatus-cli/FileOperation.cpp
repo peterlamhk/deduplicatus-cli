@@ -240,6 +240,22 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
     return ERR_NONE;
 }
 
+class UploadTask : public tbb::task {
+    tbb::concurrent_vector<string> containerList;
+    CloudStorage *cloud;
+    string cloudFolderId;
+    
+    tbb::task* execute() {
+        tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
+            cloud->uploadFile(cloudFolderId, path);
+        });
+        return NULL;
+    }
+public:
+    UploadTask( tbb::concurrent_vector<string> containerList_, CloudStorage *cloud_, string cloudFolderId_ )
+    : containerList(containerList_), cloud(cloud_), cloudFolderId(cloudFolderId_) {}
+};
+
 int FileOperation::putFile(Level *db, const char *path, const char *remotepath, const char *cloud) {
     if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
         // check local file exists
@@ -530,9 +546,8 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
             containerList.push_back(it->second);
         }
 
-        tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
-            cloud->uploadFile(cloudFolderId, path);
-        });
+        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(containerList, cloud, cloudFolderId);
+        tbb::task::enqueue(*t);
 
         // commit changes into leveldb
         leveldb::WriteOptions write_options;
