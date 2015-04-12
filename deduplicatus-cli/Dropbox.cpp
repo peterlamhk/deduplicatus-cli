@@ -16,6 +16,7 @@
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -89,7 +90,7 @@ void Dropbox::accountInfo(Level *db, WebAuth *wa, string cloudid) {
     } while ( !success && !refreshOAuth );
 }
 
-void Dropbox::uploadFile(string folderid, string path) {
+void Dropbox::uploadFile(Level *db, string folderid, string path) {
     http::client client;
     try {
         fs::path lp(path);
@@ -97,6 +98,8 @@ void Dropbox::uploadFile(string folderid, string path) {
         http::client::request request(rp);
         request << boost::network::header("Authorization", "Bearer " + accessToken);
         http::client::response response = client.post(request, get_file_contents(path.c_str()));
+
+        cout << static_cast<std::string>(body(response)) << endl;
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;

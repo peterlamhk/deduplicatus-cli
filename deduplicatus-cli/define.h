@@ -42,6 +42,7 @@
 #define NUM_FOLDER_KEY 2
 #define NUM_FILE_KEY 5
 #define NUM_VERSION_KEY 3
+#define NUM_CLOUD_ACC_KEY 6
 
 #define RB_WINDOW_SIZE 32
 #define RB_MIN_BLOCK_SIZE 1024

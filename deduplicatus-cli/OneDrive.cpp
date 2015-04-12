@@ -16,6 +16,7 @@
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -94,13 +95,25 @@ void OneDrive::accountInfo(Level *db, WebAuth *wa, string cloudid) {
     } while( !success && refreshOAuth == 1 );
 }
 
-void OneDrive::uploadFile(string folderid, string path) {
+void OneDrive::uploadFile(Level *db, string folderid, string path) {
     http::client client;
     try {
         fs::path lp(path);
         string rp = "https://api.onedrive.com/v1.0/drive/root:/.deduplicatus/" + lp.filename().string() + ":/content?access_token=" + accessToken;
         http::client::request request(rp);
         http::client::response response = client.put(request, get_file_contents(path.c_str()));
+
+//        // parse response JSON for information
+//        Document d;
+//        d.Parse(static_cast<std::string>(body(response)).c_str());
+//        Value& v_id = d["id"];
+//        // TODO: file id strange characters
+//        regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
+//        smatch match;
+//        if (regex_search(path, match, rgx)) {
+//            // TODO: hard code how many copies
+//            db->put("container::"+string(match[1])+"::store::0::fileid", v_id.GetString());
+//        }
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;

@@ -241,19 +241,20 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 }
 
 class UploadTask : public tbb::task {
+    Level *db;
     tbb::concurrent_vector<string> containerList;
     CloudStorage *cloud;
     string cloudFolderId;
     
     tbb::task* execute() {
         tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
-            cloud->uploadFile(cloudFolderId, path);
+            cloud->uploadFile(db, cloudFolderId, path);
         });
         return NULL;
     }
 public:
-    UploadTask( tbb::concurrent_vector<string> containerList_, CloudStorage *cloud_, string cloudFolderId_ )
-    : containerList(containerList_), cloud(cloud_), cloudFolderId(cloudFolderId_) {}
+    UploadTask( Level *db_, tbb::concurrent_vector<string> containerList_, CloudStorage *cloud_, string cloudFolderId_ )
+    : db(db_), containerList(containerList_), cloud(cloud_), cloudFolderId(cloudFolderId_) {}
 };
 
 int FileOperation::putFile(Level *db, const char *path, const char *remotepath, const char *cloud) {
@@ -526,13 +527,49 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         chunkVector.clear();
 
 
-        // string cloudid = "b91b57d5-fa39-47f9-ad37-31d143f62c78";
-        // CloudStorage *cloud = new Dropbox(db->get("clouds::account::" + cloudid + "::accessToken"));
-        // string cloudid = "a87ea3d3-84a7-42a4-b1e0-0dc5e38e5c00";
-        // CloudStorage *cloud = new OneDrive(db->get("clouds::account::" + cloudid + "::accessToken"));
-        string cloudid = "28660fbb-9143-4a4d-99c0-125493886143";
-        CloudStorage *cloud = new Box(db->get("clouds::account::" + cloudid + "::accessToken"));
-        string cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+        // save 3 cloud object to array
+        CloudStorage *clouds[3];
+        string cloudFolderIds[3];
+        for (int i = 0; i < 3; i++) {
+            clouds[i] = NULL;
+            cloudFolderIds[i] = "";
+        }
+
+        // initialize cloud objects
+        map<string, int> types = {{"dropbox", 0}, {"onedrive", 1}, {"boxdotnet", 2}};
+        string accessToken, cloudid, cloudFolderId, type;
+        int i;
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+        for (it->Seek("clouds::account::"), i = 0; it->Valid() && it->key().ToString() < "clouds::account::\xFF"; it->Next(), i++) {
+            if (i % NUM_CLOUD_ACC_KEY == 0) {
+                string s = it->key().ToString();
+                regex rgx ("^clouds::account::([0-9a-z\\-]+)::");
+                smatch match;
+                if (regex_search(s, match, rgx)) {
+                    cloudid = match[1];
+                }
+
+                accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
+                cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+                type = db->get("clouds::account::" + cloudid + "::type");
+                if (clouds[types[type]] == NULL) {
+                    switch (types[type]) {
+                        case 0:
+                            clouds[0] = new Dropbox(accessToken);
+                            cloudFolderIds[0] = cloudFolderId;
+                            break;
+                        case 1:
+                            clouds[1] = new OneDrive(accessToken);
+                            cloudFolderIds[1] = cloudFolderId;
+                            break;
+                        case 2:
+                            clouds[2] = new Box(accessToken);
+                            cloudFolderIds[2] = cloudFolderId;
+                            break;
+                    }
+                }
+            }
+        }
 
         tbb::concurrent_vector<string> containerList;
 
@@ -543,10 +580,14 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
 
+            // TODO: hard code how many copies
+            db->put("container::" + it->first + "::store::0::cloudid", cloudid);
+
             containerList.push_back(it->second);
         }
 
-        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(containerList, cloud, cloudFolderId);
+        // TODO: hard code upload to which cloud
+        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds[2], cloudFolderIds[2]);
 
         // async
         // tbb::task::enqueue(*t);

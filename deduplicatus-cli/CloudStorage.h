@@ -13,7 +13,7 @@ public:
     CloudStorage() {}
     virtual string brandName() { return ""; };
     virtual void accountInfo(Level *, WebAuth *, string) { };
-    virtual void uploadFile(string, string) { };
+    virtual void uploadFile(Level *, string, string) { };
 
     string displayName = "";
     string cloudid = "";
