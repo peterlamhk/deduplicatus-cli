@@ -12,8 +12,8 @@
 #include <string>
 #include <curl/curl.h>
 #include <boost/network/protocol/http/client.hpp>
-//#include <boost/network/uri.hpp>
-//#include <boost/filesystem.hpp>
+#include <boost/network/uri.hpp>
+#include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
 #include "rapidjson/document.h"
@@ -94,25 +94,24 @@ void Box::accountInfo(Level *db, WebAuth *wa, string cloudid) {
     } while( !success && refreshOAuth == 1 );
 }
 
-void Box::uploadFile(string local, string remote) {
+void Box::uploadFile(string folderid, string path) {
     http::client client;
     string boundary = "foo_bar_baz";
     string contentType = "multipart/form-data; boundary=" + boundary;
     string requestBody;
     try {
-        fs::path lp(local);
-        if (!remote.empty() && remote.back() != '/')
-            remote += '/';
+        fs::path lp(path);
         string rp = "https://upload.box.com/api/2.0/files/content";
         http::client::request request(rp);
 
         requestBody += "--" + boundary + "\r\n";
         requestBody += "Content-Disposition: form-data; name=\"attributes\"\r\n\r\n";
-        requestBody += "{\"name\":\"" + lp.filename().string() + "\", \"parent\":{\"id\":\"0\"}}\r\n";
+        requestBody += "{\"name\":\"" + lp.filename().string() + "\", \"parent\":{\"id\":\"" + folderid + "\"}}\r\n";
         requestBody += "--" + boundary + "\r\n";
         requestBody += "Content-Disposition: form-data; name=\"file\"; filename=\"" + lp.filename().string() + "\"\r\n";
         requestBody += "Content-Type: application/octet-stream\r\n\r\n";
-        requestBody += get_file_contents(local.c_str());
+        cout << requestBody << endl;
+        requestBody += get_file_contents(path.c_str());
         requestBody += "\r\n--" + boundary + "--\r\n";
 
         request << boost::network::header("Authorization", "Bearer " + accessToken);

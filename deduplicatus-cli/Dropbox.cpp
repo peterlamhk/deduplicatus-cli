@@ -89,16 +89,14 @@ void Dropbox::accountInfo(Level *db, WebAuth *wa, string cloudid) {
     } while ( !success && !refreshOAuth );
 }
 
-void Dropbox::uploadFile(string local, string remote) {
+void Dropbox::uploadFile(string folderid, string path) {
     http::client client;
     try {
-        fs::path lp(local);
-        if (!remote.empty() && remote.back() != '/')
-            remote += '/';
-        string rp = "https://api-content.dropbox.com/1/files_put/auto" + remote + lp.filename().string();
+        fs::path lp(path);
+        string rp = "https://api-content.dropbox.com/1/files_put/auto/.deduplicatus/"  + lp.filename().string();
         http::client::request request(rp);
         request << boost::network::header("Authorization", "Bearer " + accessToken);
-        http::client::response response = client.post(request, get_file_contents(local.c_str()));
+        http::client::response response = client.post(request, get_file_contents(path.c_str()));
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;

@@ -94,15 +94,13 @@ void OneDrive::accountInfo(Level *db, WebAuth *wa, string cloudid) {
     } while( !success && refreshOAuth == 1 );
 }
 
-void OneDrive::uploadFile(string local, string remote) {
+void OneDrive::uploadFile(string folderid, string path) {
     http::client client;
     try {
-        fs::path lp(local);
-        if (!remote.empty() && remote.back() != '/')
-            remote += '/';
-        string rp = "https://api.onedrive.com/v1.0/drive/root:" + remote + lp.filename().string() + ":/content?access_token=" + accessToken;
+        fs::path lp(path);
+        string rp = "https://api.onedrive.com/v1.0/drive/root:/.deduplicatus/" + lp.filename().string() + ":/content?access_token=" + accessToken;
         http::client::request request(rp);
-        http::client::response response = client.put(request, get_file_contents(local.c_str()));
+        http::client::response response = client.put(request, get_file_contents(path.c_str()));
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;

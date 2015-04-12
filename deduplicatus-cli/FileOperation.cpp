@@ -267,6 +267,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         if( db->isKeyExists("folder::" + filedir + "::id") ) {
             folderid = db->get("folder::" + filedir + "::id");
             isNewFile = !db->isKeyExists("file::" + folderid + "::" + filename + "::name");
+            cout << folderid << endl;
 
         } else {
             cerr << "Error: target remote directory not exists." << endl;
@@ -508,12 +509,23 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
         chunkVector.clear();
 
+
+        // string cloudid = "b91b57d5-fa39-47f9-ad37-31d143f62c78";
+        // CloudStorage *cloud = new Dropbox(db->get("clouds::account::" + cloudid + "::accessToken"));
+        // string cloudid = "a87ea3d3-84a7-42a4-b1e0-0dc5e38e5c00";
+        // CloudStorage *cloud = new OneDrive(db->get("clouds::account::" + cloudid + "::accessToken"));
+        string cloudid = "28660fbb-9143-4a4d-99c0-125493886143";
+        CloudStorage *cloud = new Box(db->get("clouds::account::" + cloudid + "::accessToken"));
+        string cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+
         // stdout all container file needed to upload (debug used)
         cout << endl << "Container UUID\t\t\t\t\t\t\t" << "Path" << endl;
         for( map<string, string>::iterator it = containerToBeUpload.begin();
              it != containerToBeUpload.end();
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
+
+            cloud->uploadFile(cloudFolderId, it->second);
         }
 
         // commit changes into leveldb
