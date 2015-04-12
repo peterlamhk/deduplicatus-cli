@@ -518,6 +518,8 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         CloudStorage *cloud = new Box(db->get("clouds::account::" + cloudid + "::accessToken"));
         string cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
 
+        tbb::concurrent_vector<string> containerList;
+
         // stdout all container file needed to upload (debug used)
         cout << endl << "Container UUID\t\t\t\t\t\t\t" << "Path" << endl;
         for( map<string, string>::iterator it = containerToBeUpload.begin();
@@ -525,8 +527,12 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
 
-            cloud->uploadFile(cloudFolderId, it->second);
+            containerList.push_back(it->second);
         }
+
+        tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
+            cloud->uploadFile(cloudFolderId, path);
+        });
 
         // commit changes into leveldb
         leveldb::WriteOptions write_options;
@@ -703,30 +709,3 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
 
     return ERR_NONE;
 }
-
-//int FileOperation::putFile(Level *db, string local, string remote) {
-//    tbb::concurrent_vector<string> chunk_list;
-//
-//    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
-//        chunk_list.push_back("haha");
-//        chunk_list.push_back("hehe");
-//        chunk_list.push_back("fuckyou");
-//        for (auto foo : chunk_list) {
-//            cout << foo << endl;
-//        }
-//
-//        // string cloudid = "daee407c-4e50-4bd3-acaa-968a98536890";
-//        // CloudStorage *cloud = new Dropbox(db->get("clouds::account::" + cloudid + "::accessToken"));
-//        // string cloudid = "f18924f5-4400-4741-8e0d-1827d9d16990";
-//        // CloudStorage *cloud = new OneDrive(db->get("clouds::account::" + cloudid + "::accessToken"));
-//        string cloudid = "28660fbb-9143-4a4d-99c0-125493886143";
-//        CloudStorage *cloud = new Box(db->get("clouds::account::" + cloudid + "::accessToken"));
-//
-//        cloud->uploadFile(local, remote);
-//
-//    } else {
-//
-//    }
-//
-//    return ERR_NONE;
-//}

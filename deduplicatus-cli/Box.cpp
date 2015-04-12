@@ -110,7 +110,6 @@ void Box::uploadFile(string folderid, string path) {
         requestBody += "--" + boundary + "\r\n";
         requestBody += "Content-Disposition: form-data; name=\"file\"; filename=\"" + lp.filename().string() + "\"\r\n";
         requestBody += "Content-Type: application/octet-stream\r\n\r\n";
-        cout << requestBody << endl;
         requestBody += get_file_contents(path.c_str());
         requestBody += "\r\n--" + boundary + "--\r\n";
 
