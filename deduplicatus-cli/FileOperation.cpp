@@ -547,7 +547,12 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
 
         UploadTask *t = new(tbb::task::allocate_root()) UploadTask(containerList, cloud, cloudFolderId);
-        tbb::task::enqueue(*t);
+
+        // async
+        // tbb::task::enqueue(*t);
+
+        // sync
+        tbb::task::spawn_root_and_wait(*t);
 
         // commit changes into leveldb
         leveldb::WriteOptions write_options;
