@@ -56,7 +56,15 @@ bool Level::put(string key, string value) {
         return false;
     }
 
-    return db->Put(leveldb::WriteOptions(), key, value).ok();
+    leveldb::WriteOptions write_options;
+    write_options.sync = true;
+    s = db->Put(write_options, key, value);
+    if( s.IsIOError() || s.IsCorruption() )  {
+        cerr << "Error: LevelDB " << s.ToString() << endl;
+        exit(ERR_LEVEL_CORRUPTED);
+    } else {
+        return s.ok();
+    }
 }
 
 bool Level::remove(string key) {
@@ -64,8 +72,16 @@ bool Level::remove(string key) {
         cerr << "Warning: LevelDB not opened." << endl;
         return false;
     }
-    
-    return db->Delete(leveldb::WriteOptions(), key).ok();
+
+    leveldb::WriteOptions write_options;
+    write_options.sync = true;
+    s = db->Delete(write_options, key);
+    if( s.IsIOError() || s.IsCorruption() )  {
+        cerr << "Error: LevelDB " << s.ToString() << endl;
+        exit(ERR_LEVEL_CORRUPTED);
+    } else {
+        return s.ok();
+    }
 }
 
 bool Level::isKeyExists(string key) {
@@ -76,7 +92,12 @@ bool Level::isKeyExists(string key) {
     
     string value;
     s = db->Get(leveldb::ReadOptions(), key, &value);
-    return s.ok();
+    if( s.IsIOError() || s.IsCorruption() )  {
+        cerr << "Error: LevelDB " << s.ToString() << endl;
+        exit(ERR_LEVEL_CORRUPTED);
+    } else {
+        return s.ok();
+    }
 }
 
 leveldb::DB *Level::getDB() {

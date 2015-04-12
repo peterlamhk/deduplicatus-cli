@@ -198,26 +198,12 @@ int WebAuth::downloadLevel() {
         string versionid = v_versionid.GetString();
         string lockid = v_lockid.GetString();
         string directory = lockid;
-        
-        // create user's directory using lockid as name, error if exists
-        DIR* dir = opendir(directory.c_str());
-        if( dir ) {
-            // directory exists
-            cerr << "Error: Directory in use." << endl;
-            closedir(dir);
-            return ERR_LOCAL_ERROR;
-            
-        } else if( ENOENT == errno ) {
-            if( mkdir(directory.c_str(), S_IRWXU) != 0 ) {
-                cerr << "Error: Can't create directory." << endl;
-                return ERR_LOCAL_ERROR;
-            }
 
-        } else {
-            cerr << "Error: Local file permission denied." << endl;
-            return ERR_LOCAL_ERROR;
+        int createDirResult = createDirectory(directory, true);
+        if( createDirResult != ERR_NONE ) {
+            return createDirResult;
         }
-        
+
         // destroy curl
         resetCurl();
         
@@ -542,29 +528,11 @@ int WebAuth::signout(bool removeDB) {
 
     // remove leveldb directory
     if( removeDB ) {
-        // read directory and remove files inside
-        DIR *dir;
-        struct dirent *dirp;
-        
-        if( (dir = opendir(c->user_lock.c_str())) == NULL ) {
-            cerr << "Error: Can't access levelDB files." << endl;
-            return ERR_LOCAL_ERROR;
-        }
-        
-        while( (dirp = readdir(dir)) != NULL ) {
-            if( dirp->d_name[0] == '.' ) {
-                // skip if it is a hidden file
-                continue;
-            }
-            string path = c->user_lock + "/" + string(dirp->d_name);
-            remove(path.c_str());
-        }
-        closedir(dir);
-        free(dirp);
-        
-        // remove the directory itself
-        remove(c->user_lock.c_str());
+        removeDirectory(c->user_lock);
     }
+
+    // remove cache directory if it exists
+    removeDirectory(c->user_lock + "-cache");
 
     return ERR_NONE;
 }

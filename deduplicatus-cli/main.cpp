@@ -139,28 +139,45 @@ int main(int argc, const char * argv[]) {
             delete db;
         }
     }
-    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {
+
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {
         operationFound = true;
         wa->getStatus();
-        if ((operationResult = requireLocked(wa)) == ERR_NONE) {
+
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
-
-            string local = string(argv[2]);
-            string remote = string(argv[3]);
-            operationResult = fo->putFile(db, local, remote);
+            operationResult = ( argc == 4 ) ?
+                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
+                fo->putFile(db, argv[2], argv[3], argv[4]); // File Manager Mode
 
             // ensure to close leveldb handler
             delete db;
         }
-
     }
-    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {}
-    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
-    if ( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
-    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
 
-    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
+    // exec: get
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "get") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 4 ) ?
+            fo->getFile(db, argv[2], argv[3], NULL) :     // Deduplication-enabled Mode (without verion-id)
+            fo->getFile(db, argv[2], argv[4], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
+
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
         operationFound = true;
         wa->getStatus();
 
