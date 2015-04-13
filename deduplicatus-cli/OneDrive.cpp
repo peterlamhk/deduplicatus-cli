@@ -119,3 +119,40 @@ void OneDrive::uploadFile(Level *db, string folderid, string path) {
         return;
     }
 }
+
+void OneDrive::downloadFile(Level *db, string cid, string path) {
+    http::client::options options;
+    options.follow_redirects(true);
+    http::client client_(options);
+
+    try {
+        string rp;
+        regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
+        smatch match;
+        if (regex_search(path, match, rgx)) {
+            rp = "https://api.onedrive.com/v1.0/drive/root:/.deduplicatus/" + string(match[1]) + ".container:/content?access_token=" + accessToken;
+            cout << rp << endl;
+        }
+        http::client::request request(rp);
+        http::client::response response = client_.get(request);
+
+        // TODO: I don't know why follow redirect doesn't work
+        const auto headers2 = boost::network::http::headers(response);
+        for (const auto h : headers2) {
+//            cout << "Header name: " << h.first << "; header value: " << h.second << '\n';
+            if (!h.first.compare("Location")) {
+                http::client::request request2(h.second);
+                http::client c(options);
+                http::client::response response2 = c.get(request2);
+
+                std::ofstream ofs(path.c_str());
+                ofs << static_cast<std::string>(body(response2)) << std::endl;
+            }
+        }
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+
+}

@@ -138,3 +138,35 @@ void Box::uploadFile(Level *db, string folderid, string path) {
         return;
     }
 }
+
+void Box::downloadFile(Level *db, string cid, string path) {
+    http::client::options options;
+    options.follow_redirects(true);
+    http::client client_(options);
+
+    try {
+        string rp = "https://api.box.com/2.0/files/" + db->get("container::" + cid + "::store::0::fileid") + "/content";
+        http::client::request request(rp);
+        request << boost::network::header("Authorization", "Bearer " + accessToken);
+        http::client::response response = client_.get(request);
+
+        // TODO: I don't know why follow redirect doesn't work
+        const auto headers2 = boost::network::http::headers(response);
+        for (const auto h : headers2) {
+//            cout << "Header name: " << h.first << "; header value: " << h.second << '\n';
+            if (!h.first.compare("Location")) {
+                http::client::request request2(h.second);
+                request2 << boost::network::header("Authorization", "Bearer " + accessToken);
+                http::client c(options);
+                http::client::response response2 = c.get(request2);
+
+                std::ofstream ofs(path.c_str());
+                ofs << static_cast<std::string>(body(response2)) << std::endl;
+            }
+        }
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+}

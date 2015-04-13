@@ -105,3 +105,28 @@ void Dropbox::uploadFile(Level *db, string folderid, string path) {
         return;
     }
 }
+
+void Dropbox::downloadFile(Level *db, string cid, string path) {
+    http::client::options options;
+    options.follow_redirects(true);
+    http::client client_(options);
+
+    try {
+        string rp;
+        regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
+        smatch match;
+        if (regex_search(path, match, rgx)) {
+            rp = "https://api-content.dropbox.com/1/files/auto/.deduplicatus/"  + string(match[1]) + ".container";
+            cout << rp << endl;
+        }
+        http::client::request request(rp);
+        request << boost::network::header("Authorization", "Bearer " + accessToken);
+        http::client::response response = client_.get(request);
+
+        std::ofstream ofs(path.c_str());
+        ofs << static_cast<std::string>(body(response)) << std::endl;
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+}
