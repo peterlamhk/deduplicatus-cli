@@ -260,18 +260,21 @@ public:
 class DownloadTask : public tbb::task {
     Level *db;
     vector<string> containerNeeded;
-    CloudStorage *cloud;
+    CloudStorage **cloud;
     string path;
+    vector<int> cloudList;
 
     tbb::task* execute() {
-        tbb::parallel_for_each(containerNeeded.begin(), containerNeeded.end(), [=](string cid) {
-            cloud->downloadFile(db, cid, path + "/" + cid + ".container");
+        int i = 0;
+        tbb::parallel_for_each(containerNeeded.begin(), containerNeeded.end(), [&i, this](string cid) {
+            cloud[cloudList[i]]->downloadFile(db, cid, path + "/" + cid + ".container");
+            i++;
         });
         return NULL;
     }
 public:
-    DownloadTask( Level *db_, vector<string> containerNeeded_, CloudStorage *cloud_, string path_ )
-    : db(db_), containerNeeded(containerNeeded_), cloud(cloud_), path(path_) {}
+    DownloadTask( Level *db_, vector<string> containerNeeded_, CloudStorage **cloud_, string path_, vector<int> cloudList_ )
+    : db(db_), containerNeeded(containerNeeded_), cloud(cloud_), path(path_), cloudList(cloudList_) {}
 };
 
 int FileOperation::putFile(Level *db, const char *path, const char *remotepath, const char *cloud) {
@@ -546,10 +549,10 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
 
         // save 3 cloud object to array
         CloudStorage *clouds[3];
-        string cloudFolderIds[3];
+        vector<string> cloudFolderIds;
+        vector<string> cloudIds;
         for (int i = 0; i < 3; i++) {
             clouds[i] = NULL;
-            cloudFolderIds[i] = "";
         }
 
         // initialize cloud objects
@@ -573,15 +576,18 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
                     switch (types[type]) {
                         case 0:
                             clouds[0] = new Dropbox(accessToken);
-                            cloudFolderIds[0] = cloudFolderId;
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
                             break;
                         case 1:
                             clouds[1] = new OneDrive(accessToken);
-                            cloudFolderIds[1] = cloudFolderId;
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
                             break;
                         case 2:
                             clouds[2] = new Box(accessToken);
-                            cloudFolderIds[2] = cloudFolderId;
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
                             break;
                     }
                 }
@@ -597,14 +603,16 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
 
-            // TODO: hard code how many copies
-            db->put("container::" + it->first + "::store::0::cloudid", cloudid);
+            // TODO: hard code how many copies and upload to which cloud
+            db->put("container::" + it->first + "::store::0::cloudid", cloud);
 
             containerList.push_back(it->second);
         }
 
         // TODO: hard code upload to which cloud
-        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds[0], cloudFolderIds[0]);
+        cloudFolderId = db->get("clouds::account::" + string(cloud) + "::folderId");
+        type = db->get("clouds::account::" + string(cloud) + "::type");
+        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds[types[type]], cloudFolderId);
 
         // async
         // tbb::task::enqueue(*t);
@@ -734,10 +742,8 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
 
         // save 3 cloud object to array
         CloudStorage *clouds[3];
-        string cloudFolderIds[3];
         for (int i = 0; i < 3; i++) {
             clouds[i] = NULL;
-            cloudFolderIds[i] = "";
         }
 
         // initialize cloud objects
@@ -761,20 +767,19 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
                     switch (types[type]) {
                         case 0:
                             clouds[0] = new Dropbox(accessToken);
-                            cloudFolderIds[0] = cloudFolderId;
                             break;
                         case 1:
                             clouds[1] = new OneDrive(accessToken);
-                            cloudFolderIds[1] = cloudFolderId;
                             break;
                         case 2:
                             clouds[2] = new Box(accessToken);
-                            cloudFolderIds[2] = cloudFolderId;
                             break;
                     }
                 }
             }
         }
+
+        vector<int> cloudList;
 
         // -- debug use only: list containers needed to download
         cout << "Container Needed" << endl;
@@ -782,12 +787,14 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             vector<string>::const_iterator it = containerNeeded.begin();
             while( it != containerNeeded.end() ) {
                 cout << *it << endl;
+                string ccloudid = db->get("container::" + *it + "::store::0::cloudid");
+                cloudList.push_back(types[db->get("clouds::account::" + ccloudid + "::type")]);
                 ++it;
             }
         }
         cout << "----------------" << endl << endl;
 
-        DownloadTask *t = new(tbb::task::allocate_root()) DownloadTask(db, containerNeeded, clouds[0], c->user_lock + "-cache");
+        DownloadTask *t = new(tbb::task::allocate_root()) DownloadTask(db, containerNeeded, clouds, c->user_lock + "-cache", cloudList);
         tbb::task::spawn_root_and_wait(*t);
 
         // iterate container to merge back the file

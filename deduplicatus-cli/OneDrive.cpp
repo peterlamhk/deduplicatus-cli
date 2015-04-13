@@ -126,13 +126,7 @@ void OneDrive::downloadFile(Level *db, string cid, string path) {
     http::client client_(options);
 
     try {
-        string rp;
-        regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
-        smatch match;
-        if (regex_search(path, match, rgx)) {
-            rp = "https://api.onedrive.com/v1.0/drive/root:/.deduplicatus/" + string(match[1]) + ".container:/content?access_token=" + accessToken;
-            cout << rp << endl;
-        }
+        string rp = "https://api.onedrive.com/v1.0/drive/root:/.deduplicatus/" + cid + ".container:/content?access_token=" + accessToken;
         http::client::request request(rp);
         http::client::response response = client_.get(request);
 

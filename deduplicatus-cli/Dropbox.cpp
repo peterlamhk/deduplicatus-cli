@@ -99,7 +99,7 @@ void Dropbox::uploadFile(Level *db, string folderid, string path) {
         request << boost::network::header("Authorization", "Bearer " + accessToken);
         http::client::response response = client.post(request, get_file_contents(path.c_str()));
 
-        cout << static_cast<std::string>(body(response)) << endl;
+//        cout << static_cast<std::string>(body(response)) << endl;
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return;
@@ -112,13 +112,7 @@ void Dropbox::downloadFile(Level *db, string cid, string path) {
     http::client client_(options);
 
     try {
-        string rp;
-        regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
-        smatch match;
-        if (regex_search(path, match, rgx)) {
-            rp = "https://api-content.dropbox.com/1/files/auto/.deduplicatus/"  + string(match[1]) + ".container";
-            cout << rp << endl;
-        }
+        string rp = "https://api-content.dropbox.com/1/files/auto/.deduplicatus/"  + cid + ".container";
         http::client::request request(rp);
         request << boost::network::header("Authorization", "Bearer " + accessToken);
         http::client::response response = client_.get(request);

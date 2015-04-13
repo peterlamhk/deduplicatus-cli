@@ -164,7 +164,8 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
-                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
+//                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
+                fo->putFile(db, argv[2], argv[3], argv[4]) :     // Deduplication-enabled Mode
                 fo->putFile(db, argv[2], argv[3], argv[4]); // File Manager Mode
 
             // ensure to close leveldb handler
@@ -269,7 +270,9 @@ void showUsage(const char * path) {
     cout << "Usage (Deduplication-enabled Mode):" << endl;
     cout << "\t" << executable << " ls <path>" << endl;
     cout << "\t" << executable << " ls-version <path>" << endl;
-    cout << "\t" << executable << " put <local> <remote>" << endl;
+    // TODO: auto detetermine which cloud to upload
+//    cout << "\t" << executable << " put <local> <remote>" << endl;
+    cout << "\t" << executable << " put <local> <remote> <cloud-id>" << endl;
     cout << "\t" << executable << " get <remote> (<version-id>) <local>" << endl;
     cout << "\t" << executable << " mv <original> (<version-id>) <new>" << endl;
     cout << "\t" << executable << " cp <original> (<version-id>) <new>" << endl;
