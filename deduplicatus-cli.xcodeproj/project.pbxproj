@@ -283,6 +283,7 @@
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
 					/usr/local/Cellar/libtomcrypt/1.17/include,
+					"/usr/local/Cellar/tbb/4.3-20141023/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -290,20 +291,20 @@
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					/usr/local/Cellar/libtomcrypt/1.17/lib,
+					"/usr/local/Cellar/tbb/4.3-20141023/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
 					"-I\"rapidjson/include\"",
-					"-lboost_system",
 					"-lboost_system-mt",
 					"-lboost_filesystem-mt",
 					"-lboost_thread-mt",
 					"-lcppnetlib-client-connections",
 					"-lcppnetlib-uri",
-					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
 					"-ltomcrypt",
+					"-ltbb",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
@@ -323,6 +324,7 @@
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
 					/usr/local/Cellar/libtomcrypt/1.17/include,
+					"/usr/local/Cellar/tbb/4.3-20141023/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -330,20 +332,20 @@
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					/usr/local/Cellar/libtomcrypt/1.17/lib,
+					"/usr/local/Cellar/tbb/4.3-20141023/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
 					"-I\"rapidjson/include\"",
-					"-lboost_system",
 					"-lboost_system-mt",
 					"-lboost_filesystem-mt",
 					"-lboost_thread-mt",
 					"-lcppnetlib-client-connections",
 					"-lcppnetlib-uri",
-					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
 					"-ltomcrypt",
+					"-ltbb",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";

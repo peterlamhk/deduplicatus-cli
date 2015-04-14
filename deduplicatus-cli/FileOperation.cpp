@@ -15,6 +15,8 @@
 #include <time.h>
 #include <tomcrypt.h>
 #include <libgen.h>
+#include <vector>
+#include <tbb/tbb.h>
 #include "FileOperation.h"
 #include "WebAuth.h"
 #include "Level.h"
@@ -238,6 +240,43 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
     return ERR_NONE;
 }
 
+class UploadTask : public tbb::task {
+    Level *db;
+    tbb::concurrent_vector<string> containerList;
+    CloudStorage *cloud;
+    string cloudFolderId;
+
+    tbb::task* execute() {
+        tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
+            cloud->uploadFile(db, cloudFolderId, path);
+        });
+        return NULL;
+    }
+public:
+    UploadTask( Level *db_, tbb::concurrent_vector<string> containerList_, CloudStorage *cloud_, string cloudFolderId_ )
+    : db(db_), containerList(containerList_), cloud(cloud_), cloudFolderId(cloudFolderId_) {}
+};
+
+class DownloadTask : public tbb::task {
+    Level *db;
+    vector<string> containerNeeded;
+    CloudStorage **cloud;
+    string path;
+    vector<int> cloudList;
+
+    tbb::task* execute() {
+        int i = 0;
+        tbb::parallel_for_each(containerNeeded.begin(), containerNeeded.end(), [&i, this](string cid) {
+            cloud[cloudList[i]]->downloadFile(db, cid, path + "/" + cid + ".container");
+            i++;
+        });
+        return NULL;
+    }
+public:
+    DownloadTask( Level *db_, vector<string> containerNeeded_, CloudStorage **cloud_, string path_, vector<int> cloudList_ )
+    : db(db_), containerNeeded(containerNeeded_), cloud(cloud_), path(path_), cloudList(cloudList_) {}
+};
+
 int FileOperation::putFile(Level *db, const char *path, const char *remotepath, const char *cloud) {
     if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
         // check local file exists
@@ -265,6 +304,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         if( db->isKeyExists("folder::" + filedir + "::id") ) {
             folderid = db->get("folder::" + filedir + "::id");
             isNewFile = !db->isKeyExists("file::" + folderid + "::" + filename + "::name");
+            cout << folderid << endl;
 
         } else {
             cerr << "Error: target remote directory not exists." << endl;
@@ -506,13 +546,79 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
         chunkVector.clear();
 
+
+        // save 3 cloud object to array
+        CloudStorage *clouds[3];
+        vector<string> cloudFolderIds;
+        vector<string> cloudIds;
+        for (int i = 0; i < 3; i++) {
+            clouds[i] = NULL;
+        }
+
+        // initialize cloud objects
+        map<string, int> types = {{"dropbox", 0}, {"onedrive", 1}, {"boxdotnet", 2}};
+        string accessToken, cloudid, cloudFolderId, type;
+        int i;
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+        for (it->Seek("clouds::account::"), i = 0; it->Valid() && it->key().ToString() < "clouds::account::\xFF"; it->Next(), i++) {
+            if (i % NUM_CLOUD_ACC_KEY == 0) {
+                string s = it->key().ToString();
+                regex rgx ("^clouds::account::([0-9a-z\\-]+)::");
+                smatch match;
+                if (regex_search(s, match, rgx)) {
+                    cloudid = match[1];
+                }
+
+                accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
+                cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+                type = db->get("clouds::account::" + cloudid + "::type");
+                if (clouds[types[type]] == NULL) {
+                    switch (types[type]) {
+                        case 0:
+                            clouds[0] = new Dropbox(accessToken);
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
+                            break;
+                        case 1:
+                            clouds[1] = new OneDrive(accessToken);
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
+                            break;
+                        case 2:
+                            clouds[2] = new Box(accessToken);
+                            cloudFolderIds.push_back(cloudFolderId);
+                            cloudIds.push_back(cloudid);
+                            break;
+                    }
+                }
+            }
+        }
+
+        tbb::concurrent_vector<string> containerList;
+
         // stdout all container file needed to upload (debug used)
         cout << endl << "Container UUID\t\t\t\t\t\t\t" << "Path" << endl;
         for( map<string, string>::iterator it = containerToBeUpload.begin();
              it != containerToBeUpload.end();
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
+
+            // TODO: hard code how many copies and upload to which cloud
+            db->put("container::" + it->first + "::store::0::cloudid", cloud);
+
+            containerList.push_back(it->second);
         }
+
+        // TODO: hard code upload to which cloud
+        cloudFolderId = db->get("clouds::account::" + string(cloud) + "::folderId");
+        type = db->get("clouds::account::" + string(cloud) + "::type");
+        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds[types[type]], cloudFolderId);
+
+        // async
+        // tbb::task::enqueue(*t);
+
+        // sync
+        tbb::task::spawn_root_and_wait(*t);
 
         // commit changes into leveldb
         leveldb::WriteOptions write_options;
@@ -633,16 +739,63 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             }
         }
 
+
+        // save 3 cloud object to array
+        CloudStorage *clouds[3];
+        for (int i = 0; i < 3; i++) {
+            clouds[i] = NULL;
+        }
+
+        // initialize cloud objects
+        map<string, int> types = {{"dropbox", 0}, {"onedrive", 1}, {"boxdotnet", 2}};
+        string accessToken, cloudid, cloudFolderId, type;
+        int i;
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+        for (it->Seek("clouds::account::"), i = 0; it->Valid() && it->key().ToString() < "clouds::account::\xFF"; it->Next(), i++) {
+            if (i % NUM_CLOUD_ACC_KEY == 0) {
+                string s = it->key().ToString();
+                regex rgx ("^clouds::account::([0-9a-z\\-]+)::");
+                smatch match;
+                if (regex_search(s, match, rgx)) {
+                    cloudid = match[1];
+                }
+
+                accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
+                cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+                type = db->get("clouds::account::" + cloudid + "::type");
+                if (clouds[types[type]] == NULL) {
+                    switch (types[type]) {
+                        case 0:
+                            clouds[0] = new Dropbox(accessToken);
+                            break;
+                        case 1:
+                            clouds[1] = new OneDrive(accessToken);
+                            break;
+                        case 2:
+                            clouds[2] = new Box(accessToken);
+                            break;
+                    }
+                }
+            }
+        }
+
+        vector<int> cloudList;
+
         // -- debug use only: list containers needed to download
         cout << "Container Needed" << endl;
         {
             vector<string>::const_iterator it = containerNeeded.begin();
             while( it != containerNeeded.end() ) {
                 cout << *it << endl;
+                string ccloudid = db->get("container::" + *it + "::store::0::cloudid");
+                cloudList.push_back(types[db->get("clouds::account::" + ccloudid + "::type")]);
                 ++it;
             }
         }
         cout << "----------------" << endl << endl;
+
+        DownloadTask *t = new(tbb::task::allocate_root()) DownloadTask(db, containerNeeded, clouds, c->user_lock + "-cache", cloudList);
+        tbb::task::spawn_root_and_wait(*t);
 
         // iterate container to merge back the file
         unsigned char *buf;

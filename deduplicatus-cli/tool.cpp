@@ -18,6 +18,8 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <tomcrypt.h>
+#include <cstdio>
+#include <cerrno>
 
 using namespace std;
 
@@ -51,9 +53,9 @@ string sha1_file(const char *filename) {
     hash_state md;
     sha1_init(&md);
 
-    while( !eof ) {
+    while ( !eof ) {
         unsigned long fread_size = fread(buf, 1, MAX_FILE_READ_SIZE, fp);
-        if( fread_size < MAX_FILE_READ_SIZE ) {
+        if ( fread_size < MAX_FILE_READ_SIZE ) {
             eof = 1;
         }
         sha1_process(&md, buf, (unsigned int) fread_size);
@@ -92,6 +94,20 @@ string uuid() {
     boost::uuids::uuid u = gen();
 
     return boost::uuids::to_string(u);
+}
+
+string get_file_contents(const char *filename) {
+    FILE *fp = fopen(filename, "rb");
+    if (fp) {
+        string contents;
+        fseek(fp, 0, SEEK_END);
+        contents.resize(ftell(fp));
+        rewind(fp);
+        fread(&contents[0], 1, contents.size(), fp);
+        fclose(fp);
+        return (contents);
+    }
+    throw (errno);
 }
 
 int createDirectory(string directory, bool warnExists) {
