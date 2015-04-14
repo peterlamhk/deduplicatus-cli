@@ -431,7 +431,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
                     batch.Put("container::" + containerid + "::checksum", sha1_file(containerPath.c_str()));
 
                     // insert record to the list of container to be uploaded
-                    containerToBeUpload.insert(pair<string, string>(containerid, containerPath));
+                    containerToBeUpload[containerid] = containerPath;
 
                     // if there is more chunk to process, init another container
                     if( uniqueChunkCount > 0 ) {
