@@ -131,13 +131,7 @@ int FileOperation::listFile(Level *db, string path) {
                         strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
                         lastModified = string(date);
 
-                        string s = it->key().ToString();
-                        regex rgx ("^file::" + uuid + "::([0-9a-z\\-]+)::");
-                        smatch match;
-                        if (regex_search(s, match, rgx)) {
-                            fileuuid = match[1];
-                        }
-                        cout << lastModified << "\t" << name << "\t" << lastSize << "\t" << fileuuid << endl;
+                        cout << lastModified << "\t" << name << "\t" << lastSize << endl;
                         break;
                     }
                     case 5: {
