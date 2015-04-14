@@ -109,18 +109,6 @@ int FileOperation::listFile(Level *db, string path) {
                 for (it->Seek("file::" + uuid + "::"), j = 0; it->Valid() && it->key().ToString() < "file::" + uuid + "::\xFF"; it->Next(), j++) {
                     switch (j % NUM_FILE_KEY) {
                     case 0: {
-                        time_t t = stoi(db->get(it->key().ToString()));
-                        struct tm *tm = localtime(&t);
-                        char date[20];
-                        strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
-                        lastModified = string(date);
-
-                        string s = it->key().ToString();
-                        regex rgx ("^file::" + uuid + "::([0-9a-z\\-]+)::");
-                        smatch match;
-                        if (regex_search(s, match, rgx)) {
-                            fileuuid = match[1];
-                        }
                         break;
                     }
                     case 1: {
@@ -137,7 +125,22 @@ int FileOperation::listFile(Level *db, string path) {
                     }
                     case 4: {
                         // versions = db->get(it->key().ToString());
+                        time_t t = stoi(db->get(it->key().ToString()));
+                        struct tm *tm = localtime(&t);
+                        char date[20];
+                        strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
+                        lastModified = string(date);
+
+                        string s = it->key().ToString();
+                        regex rgx ("^file::" + uuid + "::([0-9a-z\\-]+)::");
+                        smatch match;
+                        if (regex_search(s, match, rgx)) {
+                            fileuuid = match[1];
+                        }
                         cout << lastModified << "\t" << name << "\t" << lastSize << "\t" << fileuuid << endl;
+                        break;
+                    }
+                    case 5: {
                         break;
                     }
                     }
