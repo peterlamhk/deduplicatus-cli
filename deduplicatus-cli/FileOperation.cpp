@@ -17,6 +17,7 @@
 #include <libgen.h>
 #include <vector>
 #include <tbb/tbb.h>
+#include <random>
 #include "FileOperation.h"
 #include "WebAuth.h"
 #include "Level.h"
@@ -243,18 +244,26 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 class UploadTask : public tbb::task {
     Level *db;
     tbb::concurrent_vector<string> containerList;
-    CloudStorage *cloud;
-    string cloudFolderId;
+    CloudStorage **clouds;
+    vector<string> cloudIds;
+    vector<string> cloudFolderIds;
+    map<string, int> types;
 
     tbb::task* execute() {
         tbb::parallel_for_each(containerList.begin(), containerList.end(), [=](string path) {
-            cloud->uploadFile(db, cloudFolderId, path);
+            int count = (int)cloudIds.size();
+            std::random_device rd;
+            std::mt19937 rng(rd());
+            std::uniform_int_distribution<int> uni(0, count-1);
+            int cloudNum = uni(rng);
+            string type = db->get("clouds::account::" + cloudIds[cloudNum] + "::type");
+            clouds[types[type]]->uploadFile(db, cloudFolderIds[cloudNum], path);
         });
         return NULL;
     }
 public:
-    UploadTask( Level *db_, tbb::concurrent_vector<string> containerList_, CloudStorage *cloud_, string cloudFolderId_ )
-    : db(db_), containerList(containerList_), cloud(cloud_), cloudFolderId(cloudFolderId_) {}
+    UploadTask( Level *db_, tbb::concurrent_vector<string> containerList_, CloudStorage **clouds_, vector<string> cloudIds_, vector<string> cloudFolderIds_, map<string, int> types_ )
+    : db(db_), containerList(containerList_), clouds(clouds_), cloudIds(cloudIds_), cloudFolderIds(cloudFolderIds_), types(types_) {}
 };
 
 class DownloadTask : public tbb::task {
@@ -609,10 +618,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
             containerList.push_back(it->second);
         }
 
-        // TODO: hard code upload to which cloud
-        cloudFolderId = db->get("clouds::account::" + string(cloud) + "::folderId");
-        type = db->get("clouds::account::" + string(cloud) + "::type");
-        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds[types[type]], cloudFolderId);
+        UploadTask *t = new(tbb::task::allocate_root()) UploadTask(db, containerList, clouds, cloudIds, cloudFolderIds, types);
 
         // async
         // tbb::task::enqueue(*t);

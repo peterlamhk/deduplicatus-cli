@@ -270,9 +270,7 @@ void showUsage(const char * path) {
     cout << "Usage (Deduplication-enabled Mode):" << endl;
     cout << "\t" << executable << " ls <path>" << endl;
     cout << "\t" << executable << " ls-version <path>" << endl;
-    // TODO: auto detetermine which cloud to upload
-//    cout << "\t" << executable << " put <local> <remote>" << endl;
-    cout << "\t" << executable << " put <local> <remote> <cloud-id>" << endl;
+    cout << "\t" << executable << " put <local> <remote>" << endl;
     cout << "\t" << executable << " get <remote> (<version-id>) <local>" << endl;
     cout << "\t" << executable << " mv <original> (<version-id>) <new>" << endl;
     cout << "\t" << executable << " cp <original> (<version-id>) <new>" << endl;
