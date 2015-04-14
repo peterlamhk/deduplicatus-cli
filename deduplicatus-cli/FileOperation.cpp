@@ -257,6 +257,12 @@ class UploadTask : public tbb::task {
             std::uniform_int_distribution<int> uni(0, count-1);
             int cloudNum = uni(rng);
             string type = db->get("clouds::account::" + cloudIds[cloudNum] + "::type");
+            
+            regex rgx ("\\/([a-zA-Z0-9\\-]+)\\.");
+            smatch match;
+            if (regex_search(path, match, rgx)) {
+                db->put("container::" + string(match[1]) + "::store::0::cloudid", cloudIds[cloudNum]);
+            }
             clouds[types[type]]->uploadFile(db, cloudFolderIds[cloudNum], path);
         });
         return NULL;
@@ -611,9 +617,6 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
              it != containerToBeUpload.end();
              it++ ) {
             cout << it->first << "\t" << it->second << endl;
-
-            // TODO: hard code how many copies and upload to which cloud
-            db->put("container::" + it->first + "::store::0::cloudid", cloud);
 
             containerList.push_back(it->second);
         }
