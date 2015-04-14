@@ -30,6 +30,7 @@ private:
     leveldb::DB *db;
     leveldb::Status s;
     string currentPath;
+    bool repaired;
 };
 
 #endif /* defined(__deduplicatus_cli__Level__) */

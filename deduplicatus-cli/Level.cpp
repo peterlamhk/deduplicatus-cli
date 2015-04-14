@@ -25,7 +25,8 @@ void Level::open(string path) {
     leveldb::Options options;
     options.create_if_missing = false;
     s = leveldb::DB::Open(options, path, &db);
-    
+    repaired = false;
+
     if( s.ok() ) {
         currentPath = path;
     } else {
@@ -46,6 +47,20 @@ string Level::get(string key) {
         return value;
     } else {
         cerr << "Warning: LevelDB " << s.ToString() << key << endl;
+        if( s.IsCorruption() && !repaired ) {
+            // try to repair the leveldb
+            delete db;
+
+            repaired = true;
+            leveldb::RepairDB(currentPath, leveldb::Options());
+            cerr << "Warning: Try to repair LevelDB." << endl;
+
+            // open db and try once more time
+            leveldb::Options options;
+            options.create_if_missing = false;
+            s = leveldb::DB::Open(options, currentPath, &db);
+            return get(key);
+        }
         return string();
     }
 }
