@@ -41,10 +41,38 @@ int FileOperation::listFile(Level *db, string path) {
     // if needed, use the following statements:
     if (c->user_mode.compare(c->mode_deduplication) == 0) {
         int i, j;
+        bool exist = false;
         string folderName, folderuuid;
-        bool pwd = false;
         leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
-        cout << "Last Modified\t\tName\tSize\tUUID" << endl;
+
+        // print current directory
+        for (it->Seek("folder::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "folder::" + path + "::\xFF"; it->Next(), i++) {
+            if (i % NUM_FOLDER_KEY == 0) {
+                folderuuid = db->get(it->key().ToString());
+            } else {
+                // folder::lastModified
+                time_t t = stoi(db->get(it->key().ToString()));
+                struct tm *tm = localtime(&t);
+                char date[20];
+                strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
+
+                exist = true;
+                cout << "Last Modified\t\tName\tSize\tUUID" << endl;
+                printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
+            }
+        }
+
+        if (!exist) {
+            cout << "No such file or directory" << endl;
+            return ERR_NONE;
+        }
+
+        // append trailing '/' for easier regex handling
+        if (path.back() != '/') {
+            path += "/";
+        }
+
+        // print all subfolders in pwd
         for (it->Seek("folder::" + path), i = 0; it->Valid() && it->key().ToString() < "folder::" + path + "\xFF"; it->Next(), i++) {
             if (i % NUM_FOLDER_KEY == 0) {
                 folderuuid = db->get(it->key().ToString());
@@ -57,21 +85,19 @@ int FileOperation::listFile(Level *db, string path) {
 
                 // folder name
                 string s = it->key().ToString();
-                regex rgx ("^folder::/([0-9a-z\\-]+)::");
+                regex rgx ("^folder::"+path+"([0-9a-z\\-]+)::");
+                regex pwd ("^folder::"+path+"::");
                 smatch match;
-                if (regex_search(s, match, rgx)) {
+                if (regex_match(s, match, pwd)) {
+                    continue;
+                } else if (regex_search(s, match, rgx)) {
                     folderName = match[1];
-
-                    if (!pwd) {
-                        printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
-                        pwd = true;
-                    } else {
-                        printf("%s\t%s\t0\t%s\n", date, folderName.c_str(), folderuuid.c_str());
-                    }
+                    printf("%s\t%s\t0\t%s\n", date, folderName.c_str(), folderuuid.c_str());
                 }
             }
         }
 
+        // print files in pwd
         for (it->Seek("folder::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "folder::" + path + "::\xFF"; it->Next(), i++) {
             if (i % NUM_FOLDER_KEY == 0) {
                 // folder::id
