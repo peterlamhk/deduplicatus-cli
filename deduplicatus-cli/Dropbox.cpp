@@ -87,6 +87,10 @@ void Dropbox::accountInfo(Level *db, WebAuth *wa, string cloudid) {
             // dropbox api do not implement refresh token mechanism
             refreshOAuth = true;
         }
+
+        // clear up stream
+        stream_dropbox.str("");
+        stream_dropbox.clear();
     } while ( !success && !refreshOAuth );
 }
 

@@ -92,6 +92,10 @@ void OneDrive::accountInfo(Level *db, WebAuth *wa, string cloudid) {
                 accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
             }
         }
+
+        // clear up stream
+        stream_onedrive.str("");
+        stream_onedrive.clear();
     } while( !success && refreshOAuth == 1 );
 }
 

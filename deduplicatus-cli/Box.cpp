@@ -92,6 +92,10 @@ void Box::accountInfo(Level *db, WebAuth *wa, string cloudid) {
                 accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
             }
         }
+
+        // clear up stream
+        stream_box.str("");
+        stream_box.clear();
     } while( !success && refreshOAuth == 1 );
 }
 
