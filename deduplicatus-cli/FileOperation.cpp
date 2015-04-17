@@ -231,6 +231,11 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 
         db->put("folder::" + (string)path + "::id", uuid());
         db->put("folder::" + (string)path + "::lastModified", timestamp.str());
+
+        // update parent directory's last modified timestamp
+        string parent = dirname((char *) path);
+        db->put("folder::" + parent + "::lastModified", timestamp.str());
+
         cout << "Folder created." << endl;
 
     } else { }
@@ -607,6 +612,9 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         batch.Put("file::" + folderid + "::" + filename + "::timestamp", timestamp.str());
         batch.Put("file::" + folderid + "::" + filename + "::lastSize", filesize.str());
         batch.Put("file::" + folderid + "::" + filename + "::lastChecksum", filehash);
+
+        // update parent directory's last modified timestamp
+        batch.Put("folder::" + filedir + "::lastModified", timestamp.str());
 
         // remove all maps and vectors if no longer needed
         countInFile.clear();
@@ -1031,6 +1039,13 @@ int FileOperation::moveFile(Level *db, const char *original, const char *destina
                 batch.Put("file::" + destination_folderid + "::" + destination_name + "::name", destination_name);
             }
         }
+
+        // update original and destination folders' last modified
+        stringstream timestamp;
+        timestamp << time(NULL);
+
+        batch.Put("folder::" + original_dir + "::lastModified", timestamp.str());
+        batch.Put("folder::" + destination_dir + "::lastModified", timestamp.str());
 
         // commit changes into leveldb
         leveldb::WriteOptions write_options;
