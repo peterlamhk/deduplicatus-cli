@@ -18,6 +18,7 @@
 #include <vector>
 #include <tbb/tbb.h>
 #include <random>
+#include <algorithm>
 #include "FileOperation.h"
 #include "WebAuth.h"
 #include "Level.h"
@@ -831,6 +832,151 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             return ERR_LOCAL_ERROR;
         }
         cout << "Success downloaded file to " << local << endl;
+
+    } else { }
+
+    return ERR_NONE;
+}
+
+int FileOperation::moveFile(Level *db, const char *original, const char *destination, const char *reference) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        string original_dir = dirname((char *) original);
+        string original_name = basename((char *) original);
+        string destination_dir = dirname((char *) destination);
+        string destination_name = basename((char *) destination);
+        string original_folderid, destination_folderid;
+
+        // check original file exists
+        if( db->isKeyExists("folder::" + original_dir + "::id") ) {
+            original_folderid = db->get("folder::" + original_dir + "::id");
+
+            if( !db->isKeyExists("file::" + original_folderid + "::" + original_name + "::name") ) {
+                cerr << "Error: original file not exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+        } else {
+            cerr << "Error: original file not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check destination folder exists
+        if( db->isKeyExists("folder::" + destination_dir + "::id") ) {
+            destination_folderid = db->get("folder::" + destination_dir + "::id");
+
+            if( db->isKeyExists("file::" + destination_folderid + "::" + destination_name + "::name") ) {
+                cerr << "Error: destination file already exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+        } else {
+            cerr << "Error: destination folder not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // count number of versions in file
+        size_t numOfVersions;
+        {
+            string versions = db->get("file::" + original_folderid + "::" + original_name + "::versions");
+            numOfVersions = std::count(versions.begin(), versions.end(), ';') + 1;
+        }
+
+        // catch all leveldb operation and execute at the end
+        leveldb::WriteBatch batch;
+
+        if( reference == NULL || numOfVersions == 1 ) {
+            // move all versions in file to destination
+            {
+                string lastChecksum = db->get("file::" + original_folderid + "::" + original_name + "::lastChecksum");
+                string lastSize     = db->get("file::" + original_folderid + "::" + original_name + "::lastSize");
+                string lastVersion  = db->get("file::" + original_folderid + "::" + original_name + "::lastVersion");
+                string name         = db->get("file::" + original_folderid + "::" + original_name + "::name");
+                string timestamp    = db->get("file::" + original_folderid + "::" + original_name + "::timestamp");
+                string versions     = db->get("file::" + original_folderid + "::" + original_name + "::versions");
+
+                // write new file
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastChecksum", lastChecksum);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastSize", lastSize);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastVersion", lastVersion);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::name", destination_name);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::timestamp", timestamp);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::versions", versions);
+
+                // remove old file
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::lastChecksum");
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::lastSize");
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::lastVersion");
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::name");
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::timestamp");
+                batch.Delete("file::" + original_folderid + "::" + original_name + "::versions");
+            }
+
+        } else {
+            // move ONE version to destination
+
+            // check if version exists in file
+            string version = (string) reference;
+            string versionslist = db->get("file::" + original_folderid + "::" + original_name + "::versions");
+            if( versionslist.find(version) == string::npos ) {
+                cerr << "Error: original file version not exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+
+            // remove version in original file and generate new version list for destination file
+            string latest_version = "";
+            string new_version = "";
+            {
+                string original_versions = db->get("file::" + original_folderid + "::" + original_name + "::versions");
+                char *ch = (char *) original_versions.c_str();
+                char *p = strtok(ch, ";");
+
+                while( p != NULL ) {
+                    string v = (string) p;
+
+                    if( v.compare(version) != 0 ) {
+                        new_version += v + ";";
+
+                        if( latest_version.length() == 0 ) {
+                            latest_version = v;
+                        }
+                    }
+
+                    p = strtok(NULL, ";");
+                }
+
+                // remove trailing ;
+                new_version.erase(new_version.length() - 1, 1);
+            }
+
+            {
+                string lastChecksum  = db->get("version::" + latest_version + "::checksum");
+                string lastSize      = db->get("version::" + latest_version + "::size");
+                string lastTimestamp = db->get("version::" + latest_version + "::modified");
+
+                // write new value for original file
+                batch.Put("file::" + original_folderid + "::" + original_name + "::lastChecksum", lastChecksum);
+                batch.Put("file::" + original_folderid + "::" + original_name + "::lastSize", lastSize);
+                batch.Put("file::" + original_folderid + "::" + original_name + "::lastVersion", latest_version);
+                batch.Put("file::" + original_folderid + "::" + original_name + "::versions", new_version);
+                batch.Put("file::" + original_folderid + "::" + original_name + "::timestamp", lastTimestamp);
+
+                // create new file entry for destination file
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastChecksum", db->get("version::" + version + "::checksum"));
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastSize", db->get("version::" + version + "::size"));
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::timestamp", db->get("version::" + version + "::modified"));
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastVersion", version);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::versions", version);
+                batch.Put("file::" + destination_folderid + "::" + destination_name + "::name", destination_name);
+            }
+        }
+
+        // commit changes into leveldb
+        leveldb::WriteOptions write_options;
+        write_options.sync = true;
+        leveldb::Status s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
+        cout << "Success." << endl;
 
     } else { }
 

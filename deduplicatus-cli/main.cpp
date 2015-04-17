@@ -181,7 +181,7 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
-            fo->getFile(db, argv[2], argv[3], NULL) :     // Deduplication-enabled Mode (without verion-id)
+            fo->getFile(db, argv[2], argv[3], NULL) :   // Deduplication-enabled Mode (without verion-id)
             fo->getFile(db, argv[2], argv[4], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
 
             // ensure to close leveldb handler
@@ -189,7 +189,22 @@ int main(int argc, const char * argv[]) {
         }
     }
 
-    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {}
+    if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 4 ) ?
+                fo->moveFile(db, argv[2], argv[3], NULL) :   // Deduplication-enabled Mode (without verion-id)
+                fo->moveFile(db, argv[2], argv[4], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {}
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
 

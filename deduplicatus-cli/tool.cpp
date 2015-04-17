@@ -156,7 +156,8 @@ int removeDirectory(string directory) {
     closedir(dir);
     free(dirp);
 
-    // remove the directory itself
+    // remove the directory itself,
+    // this may fail if a hidden file still exist in directory
     remove(directory.c_str());
 
     return ERR_NONE;

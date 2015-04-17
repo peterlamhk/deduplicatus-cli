@@ -204,6 +204,11 @@ int WebAuth::downloadLevel() {
             return createDirResult;
         }
 
+        createDirResult = createDirectory(directory + "-cache", false);
+        if( createDirResult != ERR_NONE ) {
+            return createDirResult;
+        }
+
         // destroy curl
         resetCurl();
         
