@@ -40,8 +40,7 @@ FileOperation::FileOperation(Config *c) {
 }
 
 int FileOperation::listFile(Level *db, string path) {
-    // in this function, no need to separate codes for two storage modes
-    // if needed, use the following statements:
+    // in this function, separate codes for two storage modes
     if (c->user_mode.compare(c->mode_deduplication) == 0) {
         int i, j;
         bool exist = false;
@@ -60,7 +59,7 @@ int FileOperation::listFile(Level *db, string path) {
                 strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
 
                 exist = true;
-                cout << "Last Modified\t\tName\tSize\tUUID" << endl;
+                cout << "Last Modified\t\tName\tSize\tUUID (Folder ID/ File Versions ID)" << endl;
                 printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
             }
         }
@@ -316,7 +315,6 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         if( db->isKeyExists("folder::" + filedir + "::id") ) {
             folderid = db->get("folder::" + filedir + "::id");
             isNewFile = !db->isKeyExists("file::" + folderid + "::" + filename + "::name");
-            cout << folderid << endl;
 
         } else {
             cerr << "Error: target remote directory not exists." << endl;
@@ -324,10 +322,8 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
 
         // init tiger hash function for chunks
-        //Hash_state md;
-        //unsigned char *tiger_hash = (unsigned char *) malloc(sizeof(unsigned char) * tiger_desc.hashsize);
         Hash_state md;
-        unsigned char *tiger_hash = (unsigned char *) malloc(sizeof(unsigned char) * sha1_desc.hashsize);
+        unsigned char *tiger_hash = (unsigned char *) malloc(sizeof(unsigned char) * tiger_desc.hashsize);
 
         // init chunk vector
         vector<Chunk> chunkVector;
@@ -349,7 +345,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         unsigned long long unique_bytes = 0;
         unsigned long long last_position = 0;
         int eof = 0;
-        sha1_init(&md);
+        tiger_init(&md);
 
         while( !eof ) {
             // read buffer
@@ -362,12 +358,12 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
             rabin_in(rp, buf, fread_size, eof);
             while( rabin_out(rp) ) {
                 total_bytes += rp->frag_size;
-                sha1_process(&md, &buf[rp->frag_start], rp->frag_size);
+                tiger_process(&md, &buf[rp->frag_start], rp->frag_size);
 
                 if( rp->block_done ) {
-                    sha1_done(&md, tiger_hash);
+                    tiger_done(&md, tiger_hash);
 
-                    char *result = (char *) malloc(sizeof(char) * sha1_desc.hashsize * 2);
+                    char *result = (char *) malloc(sizeof(char) * tiger_desc.hashsize * 2);
                     for (int b = 0; b < 20; b++) {
                         sprintf(&result[b * 2], "%02x", tiger_hash[b]);
                     }
@@ -381,7 +377,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
 
                     // set new chunk by init new start location and tiger hash
                     last_position = total_bytes;
-                    sha1_init(&md);
+                    tiger_init(&md);
 
                     if( rp->eof ) {
                         break;
@@ -607,14 +603,9 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
 
         tbb::concurrent_vector<string> containerList;
-
-        // stdout all container file needed to upload (debug used)
-        cout << endl << "Container UUID\t\t\t\t\t\t\t" << "Path" << endl;
         for( map<string, string>::iterator it = containerToBeUpload.begin();
              it != containerToBeUpload.end();
              it++ ) {
-            cout << it->first << "\t" << it->second << endl;
-
             containerList.push_back(it->second);
         }
 
@@ -634,6 +625,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
             cerr << "Error: can't save file information into leveldb." << endl;
             return ERR_LEVEL_CORRUPTED;
         }
+        cout << "Success." << endl;
 
     } else { }
 
@@ -686,7 +678,7 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             char *emptyContent = (char *) malloc(sizeof(char) * MAX_FILE_READ_SIZE);
             while( remaining > 0 ) {
                 unsigned long long writesize = ( remaining > MAX_FILE_READ_SIZE ) ? MAX_FILE_READ_SIZE : remaining;
-                unsigned long long actually = fwrite(emptyContent, sizeof(char), remaining, localFile);
+                unsigned long long actually = fwrite(emptyContent, sizeof(char), writesize, localFile);
 
                 if( actually != writesize ) {
                     cerr << "Error: insufficient disk space." << endl;
@@ -745,7 +737,6 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             }
         }
 
-
         // save 3 cloud object to array
         CloudStorage *clouds[3];
         for (int i = 0; i < 3; i++) {
@@ -788,17 +779,14 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
         vector<int> cloudList;
 
         // -- debug use only: list containers needed to download
-        cout << "Container Needed" << endl;
         {
             vector<string>::const_iterator it = containerNeeded.begin();
             while( it != containerNeeded.end() ) {
-                cout << *it << endl;
                 string ccloudid = db->get("container::" + *it + "::store::0::cloudid");
                 cloudList.push_back(types[db->get("clouds::account::" + ccloudid + "::type")]);
                 ++it;
             }
         }
-        cout << "----------------" << endl << endl;
 
         DownloadTask *t = new(tbb::task::allocate_root()) DownloadTask(db, containerNeeded, clouds, c->user_lock + "-cache", cloudList);
         tbb::task::spawn_root_and_wait(*t);
