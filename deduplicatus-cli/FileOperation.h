@@ -28,6 +28,7 @@ public:
     int putFile(Level *, const char *, const char *, const char *);
     int getFile(Level *, const char *, const char *, const char *);
     int moveFile(Level *, const char *, const char *, const char *);
+    int copyFile(Level *, const char *, const char *, const char *);
 
 private:
     Config *c;

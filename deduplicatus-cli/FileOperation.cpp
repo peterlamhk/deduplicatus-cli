@@ -949,6 +949,12 @@ int FileOperation::moveFile(Level *db, const char *original, const char *destina
         string destination_name = basename((char *) destination);
         string original_folderid, destination_folderid;
 
+        // no destination name provided
+        if( destination_name.compare("/") == 0 ) {
+            cerr << "Error: no destination filename provided." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
         // check original file exists
         if( db->isKeyExists("folder::" + original_dir + "::id") ) {
             original_folderid = db->get("folder::" + original_dir + "::id");
@@ -1076,6 +1082,173 @@ int FileOperation::moveFile(Level *db, const char *original, const char *destina
         timestamp << time(NULL);
 
         batch.Put("folder::" + original_dir + "::lastModified", timestamp.str());
+        batch.Put("folder::" + destination_dir + "::lastModified", timestamp.str());
+
+        // commit changes into leveldb
+        leveldb::WriteOptions write_options;
+        write_options.sync = true;
+        leveldb::Status s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
+        cout << "Success." << endl;
+
+    } else { }
+
+    return ERR_NONE;
+}
+
+int FileOperation::copyFile(Level *db, const char *original, const char *destination, const char *reference) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        string original_dir = dirname((char *) original);
+        string original_name = basename((char *) original);
+        string destination_dir = dirname((char *) destination);
+        string destination_name = basename((char *) destination);
+        string original_folderid, destination_folderid;
+
+        // no destination name provided
+        if( destination_name.compare("/") == 0 ) {
+            cerr << "Error: no destination filename provided." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check original file exists
+        if( db->isKeyExists("folder::" + original_dir + "::id") ) {
+            original_folderid = db->get("folder::" + original_dir + "::id");
+
+            if( !db->isKeyExists("file::" + original_folderid + "::" + original_name + "::name") ) {
+                cerr << "Error: original file not exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+        } else {
+            cerr << "Error: original file not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check destination folder exists
+        if( db->isKeyExists("folder::" + destination_dir + "::id") ) {
+            destination_folderid = db->get("folder::" + destination_dir + "::id");
+
+            if( db->isKeyExists("file::" + destination_folderid + "::" + destination_name + "::name") ) {
+                cerr << "Error: destination file already exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+        } else {
+            cerr << "Error: destination folder not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // versions to be copied
+        string original_version = db->get("file::" + original_folderid + "::" + original_name + "::versions");
+        string versions;
+
+        if( reference == NULL ) {
+            versions = original_version;
+        } else {
+            // find if user's input version exists in file or not
+            {
+                string refversion = (string) reference;
+                if( original_version.find(refversion) == string::npos ) {
+                    cerr << "Error: original file version not exists." << endl;
+                    return ERR_LOCAL_ERROR;
+                }
+            }
+            versions = (string) reference;
+        }
+
+        // catch all leveldb operation and execute at the end
+        leveldb::WriteBatch batch;
+
+        // record the resulting version list for destination file
+        string destination_version = "";
+
+        // record the increment of referenceCount in all chunks
+        map<string, unsigned long> refCountIncrement;
+
+        // record informations of latest version for inserting file record
+        bool firstIter = true;
+        string lastVersion, lastChecksum, lastModified, lastSize;
+
+        char *vl = (char *) versions.c_str();
+        char *p = strtok(vl, ";");
+
+        while( p != NULL ) {
+            string v = (string) p;
+
+            {
+                string new_version_id = uuid();
+                destination_version += new_version_id + ";";
+
+                string chunks   = db->get("version::" + v + "::chunks");
+                string modified = db->get("version::" + v + "::modified");
+                string size     = db->get("version::" + v + "::size");
+                string checksum = db->get("version::" + v + "::checksum");
+
+                // insert new version into batch
+                batch.Put("version::" + new_version_id + "::chunks", chunks);
+                batch.Put("version::" + new_version_id + "::modified", modified);
+                batch.Put("version::" + new_version_id + "::size", size);
+                batch.Put("version::" + new_version_id + "::checksum", checksum);
+
+                if( firstIter ) {
+                    lastVersion = v;
+                    lastChecksum = checksum;
+                    lastModified = modified;
+                    lastSize = size;
+
+                    firstIter = false;
+                }
+
+                // iterate chunks and mark 1 increment for its referenceCount
+                char *tok, *saved;
+                for( tok = strtok_r((char *) chunks.c_str(), ";[]", &saved); tok; tok = strtok_r(NULL, ";[]", &saved) ) {
+                    string chunkId = (string) tok;
+
+                    if( refCountIncrement.count(chunkId) > 0 ) {
+                        refCountIncrement[chunkId] = refCountIncrement.find(chunkId)->second + 1;
+                    } else {
+                        refCountIncrement.insert(pair<string, unsigned long>(chunkId, 1));
+                    }
+                }
+            }
+
+            p = strtok(NULL, ";");
+        }
+
+        // apply increment for chunks list
+        for( map<string, unsigned long>::iterator it = refCountIncrement.begin();
+            it != refCountIncrement.end();
+            it++ ) {
+
+            string chunkId = it->first;
+            unsigned long increment = it->second;
+
+            string containerId = db->get("chunks::" + chunkId + "::container");
+            string original_count = db->get("container::" + containerId + "::chunks::" + chunkId + "::referenceCount");
+            increment += strtoul(original_count.c_str(), NULL, 0);
+
+            stringstream countString;
+            countString << increment;
+
+            batch.Put("container::" + containerId + "::chunks::" + chunkId + "::referenceCount", countString.str());
+        }
+
+        // remove trailing ;
+        destination_version.erase(destination_version.length() - 1, 1);
+
+        // insert file record
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastChecksum", lastChecksum);
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastSize", lastSize);
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::timestamp", lastModified);
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::lastVersion", lastVersion);
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::versions", destination_version);
+        batch.Put("file::" + destination_folderid + "::" + destination_name + "::name", destination_name);
+
+        // update destination folder's last modified
+        stringstream timestamp;
+        timestamp << time(NULL);
+
         batch.Put("folder::" + destination_dir + "::lastModified", timestamp.str());
 
         // commit changes into leveldb
