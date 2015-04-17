@@ -225,7 +225,21 @@ int main(int argc, const char * argv[]) {
         }
     }
 
-    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {}
+    if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 3 ) ?
+                fo->removeDirectory(db, argv[2], "") :     // Deduplication-enabled Mode
+                fo->removeDirectory(db, argv[2], argv[3]); // File Manager Mode
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
 
     // show usage if no operation is done
     if ( !operationFound ) {

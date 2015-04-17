@@ -60,7 +60,7 @@ int FileOperation::listFile(Level *db, string path) {
                 strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
 
                 exist = true;
-                cout << "Last Modified\t\tName\tSize\tUUID (Folder ID/ File Versions ID)" << endl;
+                cout << "Last Modified\t\tName\tSize\tFolder ID" << endl;
                 printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
             }
         }
@@ -235,6 +235,70 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
 
     } else { }
 
+    return ERR_NONE;
+}
+
+int FileOperation::removeDirectory(Level *db, const char *path, const char *cloud) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        string target = (string) path;
+
+        // reject removing root folder
+        if( target.compare("/") == 0 ) {
+            cerr << "Error: root directory cannot be removed." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check if target directory exists
+        if ( !db->isKeyExists("folder::" + target + "::id") ) {
+            cerr << "Error: directory not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check if target directory contains subfolders
+        string search_path = ( target.back() != '/' ) ? target + "/" : target;
+
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+        for ( it->Seek("folder::" + search_path);
+             it->Valid() && it->key().ToString() < "folder::" + search_path + "\xFF";
+             it->Next() ) {
+            // if any key matches here, means it contains subfolders
+            cerr << "Error: directory not empty." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check if target directory contains file items
+        string folderid = db->get("folder::" + target + "::id");
+
+        for ( it->Seek("file::" + folderid + "::");
+             it->Valid() && it->key().ToString() < "file::" + folderid + "::\xFF";
+             it->Next() ) {
+            // if any key matches here, means it contains subfolders
+            cerr << "Error: directory not empty." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // update parent directory's last modified
+        string parent = dirname((char *) path);
+        stringstream timestamp;
+        timestamp << time(NULL);
+
+        leveldb::WriteBatch batch;
+        batch.Put("folder::" + parent + "::lastModified", timestamp.str());
+        batch.Delete("folder::" + target + "::id");
+        batch.Delete("folder::" + target + "::lastModified");
+
+        // commit data change to leveldb
+        leveldb::WriteOptions write_options;
+        write_options.sync = true;
+        leveldb::Status s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
+        cout << "Success." << endl;
+
+    } else { }
+    
     return ERR_NONE;
 }
 
