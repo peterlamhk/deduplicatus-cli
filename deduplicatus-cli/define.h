@@ -40,7 +40,7 @@
 #define AVG_CONTAINER_SIZE 1024 * 1024 * 4
 
 #define NUM_FOLDER_KEY 2
-#define NUM_FILE_KEY 5
+#define NUM_FILE_KEY 6
 #define NUM_VERSION_KEY 3
 #define NUM_CLOUD_ACC_KEY 6
 
