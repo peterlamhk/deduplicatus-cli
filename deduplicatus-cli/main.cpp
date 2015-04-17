@@ -164,8 +164,7 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
-//                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
-                fo->putFile(db, argv[2], argv[3], argv[4]) :     // Deduplication-enabled Mode
+                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
                 fo->putFile(db, argv[2], argv[3], argv[4]); // File Manager Mode
 
             // ensure to close leveldb handler
