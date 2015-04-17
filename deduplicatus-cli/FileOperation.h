@@ -21,7 +21,7 @@ public:
     FileOperation(Config *);
 
     int listFile(Level *, string);
-    int listVersion(Level *, string);
+    int listVersion(Level *, const char *);
     int listCloud(Level *, WebAuth *);
     int makeDirectory(Level *, const char *, const char *);
     int removeDirectory(Level *, const char *, const char *);

@@ -148,8 +148,7 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
 
-            string path = string(argv[2]);
-            operationResult = fo->listVersion(db, path);
+            operationResult = fo->listVersion(db, argv[2]);
 
             // ensure to close leveldb handler
             delete db;

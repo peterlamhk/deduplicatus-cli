@@ -192,22 +192,53 @@ int FileOperation::listCloud(Level *db, WebAuth *wa) {
     return ERR_NONE;
 }
 
-int FileOperation::listVersion(Level *db, string path) {
+int FileOperation::listVersion(Level *db, const char *path) {
     if (c->user_mode.compare(c->mode_deduplication) == 0) {
-        int i;
-        string modified, size, chunks;
-        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
-        cout << "Modified\t\tSize\tChunks" << endl;
-        for (it->Seek("version::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "version::" + path + "::\xFF"; it->Next(), i++) {
-            if (i % NUM_VERSION_KEY == 0) {
-                chunks = db->get(it->key().ToString());
-            } else if (i % NUM_VERSION_KEY == 1 ) {
-                modified = db->get(it->key().ToString());
-            } else {
-                size = db->get(it->key().ToString());
-                cout << modified << "\t" << size << "\t" << chunks << endl;
-            }
+        string filepath = (string) path;
+        string filedir = dirname((char *) path);
+        string filename = basename((char *) path);
+        string folderid, verions;
+
+        if ( !db->isKeyExists("folder::" + filedir + "::id") ) {
+            cerr << "Error: path not exists." << endl;
+            return ERR_LOCAL_ERROR;
         }
+
+        folderid = db->get("folder::" + filedir + "::id");
+        if ( !db->isKeyExists("file::" + folderid + "::" + filename + "::name") ) {
+            cerr << "Error: path not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // obtain a list of verions
+        verions = db->get("file::" + folderid + "::" + filename + "::versions");
+
+        // iterate all versions and display version details to user
+        cout << "File Versions of " << filepath << endl;
+        cout << endl;
+        cout << "Last modified\t\tSize\tVersion ID" << endl;
+
+        char *ch = (char *) verions.c_str();
+        char *p = strtok(ch, ";");
+
+        while( p != NULL ) {
+            string v = (string) p;
+
+            {
+                string modified = db->get("version::" + v + "::modified");
+                string size     = db->get("version::" + v + "::size");
+
+                time_t t = stoi(modified);
+                struct tm *tm = localtime(&t);
+                char date[20];
+                strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
+
+                cout << date << "\t" << size << "\t" << v << endl;
+            }
+
+            p = strtok(NULL, ";");
+        }
+
     } else { }
 
     return ERR_NONE;
