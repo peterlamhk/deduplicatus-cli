@@ -100,6 +100,11 @@ int FileOperation::listFile(Level *db, string path) {
             }
         }
 
+        // remove trailing '/' for mkdir
+        if (path.back() == '/') {
+            path.erase(path.length()-1);
+        }
+
         // print files in pwd
         for (it->Seek("folder::" + path + "::"), i = 0; it->Valid() && it->key().ToString() < "folder::" + path + "::\xFF"; it->Next(), i++) {
             if (i % NUM_FOLDER_KEY == 0) {
