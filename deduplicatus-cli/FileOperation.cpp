@@ -770,9 +770,13 @@ int FileOperation::getFile(Level *db, WebAuth *wa, const char *remote, const cha
         }
 
         // search if the target version exists
-        if( !db->isKeyExists("version::" + versionid + "::checksum") ) {
-            cerr << "Error: file version not found." << endl;
-            return ERR_CLOUD_ERROR;
+        {
+            string versionsInFile = db->get("file::" + folderid + "::" + filename + "::versions");
+            if( versionsInFile.find(versionid) == string::npos ||
+                !db->isKeyExists("version::" + versionid + "::checksum") ) {
+                cerr << "Error: file version not found." << endl;
+                return ERR_CLOUD_ERROR;
+            }
         }
 
         // obtain filesize
@@ -1048,7 +1052,8 @@ int FileOperation::moveFile(Level *db, const char *original, const char *destina
             // check if version exists in file
             string version = (string) reference;
             string versionslist = db->get("file::" + original_folderid + "::" + original_name + "::versions");
-            if( versionslist.find(version) == string::npos ) {
+            if( versionslist.find(version) == string::npos ||
+                !db->isKeyExists("version::" + version + "::checksum") ) {
                 cerr << "Error: original file version not exists." << endl;
                 return ERR_LOCAL_ERROR;
             }
@@ -1173,7 +1178,8 @@ int FileOperation::copyFile(Level *db, const char *original, const char *destina
             // find if user's input version exists in file or not
             {
                 string refversion = (string) reference;
-                if( original_version.find(refversion) == string::npos ) {
+                if( original_version.find(refversion) == string::npos ||
+                    !db->isKeyExists("version::" + refversion + "::checksum") ) {
                     cerr << "Error: original file version not exists." << endl;
                     return ERR_LOCAL_ERROR;
                 }
