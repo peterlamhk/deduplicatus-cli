@@ -60,8 +60,8 @@ int FileOperation::listFile(Level *db, string path) {
                 strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
 
                 exist = true;
-                cout << "Last Modified\t\tName\tSize\tFolder ID" << endl;
-                printf("%s\t.\t0\t%s\n", date, folderuuid.c_str());
+                cout << "  Last Modified\t\tSize\tName" << endl;
+                printf("D %s\t0\t.\n", date);
             }
         }
 
@@ -95,7 +95,7 @@ int FileOperation::listFile(Level *db, string path) {
                     continue;
                 } else if (regex_search(s, match, rgx)) {
                     folderName = match[1];
-                    printf("%s\t%s\t0\t%s\n", date, folderName.c_str(), folderuuid.c_str());
+                    printf("D %s\t0\t%s\n", date, folderName.c_str());
                 }
             }
         }
@@ -129,17 +129,21 @@ int FileOperation::listFile(Level *db, string path) {
                         break;
                     }
                     case 4: {
-                        // versions = db->get(it->key().ToString());
                         time_t t = stoi(db->get(it->key().ToString()));
                         struct tm *tm = localtime(&t);
                         char date[20];
                         strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
                         lastModified = string(date);
-
-                        cout << lastModified << "\t" << name << "\t" << lastSize << endl;
                         break;
                     }
                     case 5: {
+                        versions = db->get(it->key().ToString());
+
+                        if( versions.find(";") == string::npos ) {
+                            cout << "F " << lastModified << "\t" << lastSize << "\t" << name << endl;
+                        } else {
+                            cout << "V " << lastModified << "\t" << lastSize << "\t" << name << endl;
+                        }
                         break;
                     }
                     }
