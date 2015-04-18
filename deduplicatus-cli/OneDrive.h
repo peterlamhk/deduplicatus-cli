@@ -22,6 +22,7 @@ public:
     void accountInfo(Level *, WebAuth *, string) override;
     void uploadFile(Level *, string, string) override;
     void downloadFile(Level *, string, string) override;
+    void deleteFile(Level *, string) override;
 
 private:
     string path_base;

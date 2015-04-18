@@ -22,10 +22,12 @@ public:
     void accountInfo(Level *, WebAuth *, string) override;
     void uploadFile(Level *, string, string) override;
     void downloadFile(Level *, string, string) override;
+    void deleteFile(Level *, string) override;
 
 private:
     string path_base;
     string path_account_info;
+    string path_delete_file;
 };
 
 #endif /* defined(__deduplicatus_cli__Dropbox__) */

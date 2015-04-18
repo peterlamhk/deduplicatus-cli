@@ -29,6 +29,8 @@ public:
     int getFile(Level *, WebAuth *, const char *, const char *, const char *);
     int moveFile(Level *, const char *, const char *, const char *);
     int copyFile(Level *, const char *, const char *, const char *);
+    int removeFile(Level *, const char *, const char *);
+    bool isContainerReferred(Level *, string);
 
 private:
     Config *c;

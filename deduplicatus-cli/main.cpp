@@ -221,7 +221,22 @@ int main(int argc, const char * argv[]) {
         }
     }
 
-    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {}
+    // exec: rm
+    if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rm") == 0 ) {
+        operationFound = true;
+        wa->getStatus();
+
+        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+            operationResult = ( argc == 3 ) ?
+                fo->removeFile(db, argv[2], NULL) :   // Deduplication-enabled Mode (without verion-id)
+                fo->removeFile(db, argv[2], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
 
     // exec: mkdir
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {

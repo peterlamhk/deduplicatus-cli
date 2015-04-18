@@ -15,7 +15,6 @@
 #include <time.h>
 #include <tomcrypt.h>
 #include <libgen.h>
-#include <vector>
 #include <tbb/tbb.h>
 #include <random>
 #include <algorithm>
@@ -396,6 +395,26 @@ class DownloadTask : public tbb::task {
 public:
     DownloadTask( Level *db_, vector<string> containerNeeded_, CloudStorage **cloud_, string path_, vector<int> cloudList_ )
     : db(db_), containerNeeded(containerNeeded_), cloud(cloud_), path(path_), cloudList(cloudList_) {}
+};
+
+class DeleteTask : public tbb::task {
+    Level *db;
+    vector<string> containerToBeDeleted;
+    CloudStorage **cloud;
+    string path;
+    vector<int> cloudList;
+
+    tbb::task* execute() {
+        int i = 0;
+        tbb::parallel_for_each(containerToBeDeleted.begin(), containerToBeDeleted.end(), [&i, this](string cid) {
+            cloud[cloudList[i]]->deleteFile(db, cid);
+            i++;
+        });
+        return NULL;
+    }
+public:
+    DeleteTask( Level *db_, vector<string> containerToBeDeleted_, CloudStorage **cloud_, vector<int> cloudList_ )
+    : db(db_), containerToBeDeleted(containerToBeDeleted_), cloud(cloud_), cloudList(cloudList_) {}
 };
 
 int FileOperation::putFile(Level *db, WebAuth *wa, const char *path, const char *remotepath, const char *cloud) {
@@ -1303,4 +1322,297 @@ int FileOperation::copyFile(Level *db, const char *original, const char *destina
     } else { }
 
     return ERR_NONE;
+}
+
+int FileOperation::removeFile(Level *db, const char *path, const char *reference) {
+    if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
+        string filedir = dirname((char *) path);
+        string filename = basename((char *) path);
+        string folderid;
+
+        // check if target file exists
+        if( db->isKeyExists("folder::" + filedir + "::id") ) {
+            folderid = db->get("folder::" + filedir + "::id");
+
+            if( !db->isKeyExists("file::" + folderid + "::" + filename + "::name") ) {
+                cerr << "Error: file not exists." << endl;
+                return ERR_LOCAL_ERROR;
+            }
+
+        } else {
+            cerr << "Error: file not exists." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // check target version exists
+        string targetversions;
+        if( reference != NULL ) {
+            {
+                string fileversion = db->get("file::" + folderid + "::" + filename + "::versions");
+                string version = (string) reference;
+                if( fileversion.find(version) == string::npos ||
+                   !db->isKeyExists("version::" + version + "::checksum") ) {
+                    cerr << "Error: file version not exists." << endl;
+                    return ERR_LOCAL_ERROR;
+                }
+            }
+            targetversions = (string) reference;
+        } else {
+            targetversions = db->get("file::" + folderid + "::" + filename + "::versions");
+        }
+
+        // count number of versions in file
+        size_t numOfVersions;
+        {
+            string versions = db->get("file::" + folderid + "::" + filename + "::versions");
+            numOfVersions = std::count(versions.begin(), versions.end(), ';') + 1;
+        }
+
+        // catch all leveldb operation and execute at the end
+        leveldb::WriteBatch batch;
+
+        if( reference == NULL || numOfVersions == 1 ) {
+            // remove file record (because the only 1 version in file/ whole file is being removed)
+            batch.Delete("file::" + folderid + "::" + filename + "::lastChecksum");
+            batch.Delete("file::" + folderid + "::" + filename + "::lastSize");
+            batch.Delete("file::" + folderid + "::" + filename + "::lastVersion");
+            batch.Delete("file::" + folderid + "::" + filename + "::name");
+            batch.Delete("file::" + folderid + "::" + filename + "::timestamp");
+            batch.Delete("file::" + folderid + "::" + filename + "::versions");
+
+        } else {
+            // generate new list of versions and write to file record
+            {
+                string new_versions = "";
+                string latest_version = "";
+                string original_versions = db->get("file::" + folderid + "::" + filename + "::versions");
+                char *ch = (char *) original_versions.c_str();
+                char *p = strtok(ch, ";");
+
+                while( p != NULL ) {
+                    string v = (string) p;
+
+                    if( v.compare(targetversions) != 0 ) {
+                        new_versions += v + ";";
+
+                        if( latest_version.length() == 0 ) {
+                            latest_version = v;
+                        }
+                    }
+
+                    p = strtok(NULL, ";");
+                }
+
+                // remove trailing ;
+                new_versions.erase(new_versions.length() - 1, 1);
+
+                // update file record
+                batch.Put("file::" + folderid + "::" + filename + "::versions", new_versions);
+
+                string lastChecksum  = db->get("version::" + latest_version + "::checksum");
+                string lastSize      = db->get("version::" + latest_version + "::size");
+                string lastTimestamp = db->get("version::" + latest_version + "::modified");
+                batch.Put("file::" + folderid + "::" + filename + "::lastChecksum", lastChecksum);
+                batch.Put("file::" + folderid + "::" + filename + "::lastSize", lastSize);
+                batch.Put("file::" + folderid + "::" + filename + "::timestamp", lastTimestamp);
+            }
+        }
+
+        // iterate the versions to be removed, mark the decrement of referenceCount for chunks
+        map<string, unsigned long> refCountDecrement;
+
+        char *vl = (char *) targetversions.c_str();
+        char *p = strtok(vl, ";");
+
+        while( p != NULL ) {
+            string v = (string) p;
+
+            {
+                string chunks = db->get("version::" + v + "::chunks");
+
+                char *tok, *saved;
+                for( tok = strtok_r((char *) chunks.c_str(), ";[]", &saved); tok; tok = strtok_r(NULL, ";[]", &saved) ) {
+                    string chunkId = (string) tok;
+
+                    if( refCountDecrement.count(chunkId) > 0 ) {
+                        refCountDecrement[chunkId] = refCountDecrement.find(chunkId)->second + 1;
+                    } else {
+                        refCountDecrement.insert(pair<string, unsigned long>(chunkId, 1));
+                    }
+                }
+            }
+
+            // remove version entry
+            batch.Delete("version::" + v + "::chunks");
+            batch.Delete("version::" + v + "::modified");
+            batch.Delete("version::" + v + "::size");
+            batch.Delete("version::" + v + "::checksum");
+
+            p = strtok(NULL, ";");
+        }
+
+        // record the containers involved
+        vector<string> containersInvolved;
+
+        // apply increment for chunks list
+        for( map<string, unsigned long>::iterator it = refCountDecrement.begin();
+            it != refCountDecrement.end();
+            it++ ) {
+
+            string chunkId = it->first;
+            unsigned long decrement = it->second;
+
+            {
+                string containerId = db->get("chunks::" + chunkId + "::container");
+                string original_count = db->get("container::" + containerId + "::chunks::" + chunkId + "::referenceCount");
+                decrement = strtoul(original_count.c_str(), NULL, 0) - decrement;
+
+                stringstream countString;
+                countString << decrement;
+
+                batch.Put("container::" + containerId + "::chunks::" + chunkId + "::referenceCount", countString.str());
+
+                if( find(containersInvolved.begin(), containersInvolved.end(), containerId) == containersInvolved.end() ) {
+                    containersInvolved.push_back(containerId);
+                }
+            }
+        }
+
+        // apply changes before continues
+        leveldb::WriteOptions write_options;
+        write_options.sync = true;
+        leveldb::Status s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
+
+        batch.Clear();
+
+        // sum the reference count in container, break if one chunk in container has referenceCount > 0
+        vector<string>::const_iterator it = containersInvolved.begin();
+        while( it != containersInvolved.end() ) {
+            string containerId = *it;
+
+            if( isContainerReferred(db, containerId) ) {
+                containersInvolved.erase(it);
+
+            } else {
+                // remove container from leveldb records
+                leveldb::Iterator *itc = db->getDB()->NewIterator(leveldb::ReadOptions());
+                for ( itc->Seek("container::" + containerId + "::");
+                     itc->Valid() && itc->key().ToString() < "container::" + containerId + "::\xFF";
+                     itc->Next() ) {
+                    batch.Delete(itc->key().ToString());
+
+                    {
+                        smatch sm;
+                        regex_match(itc->key().ToString(), sm, regex("^container::" + containerId + "::chunks::(\\w+)::referenceCount$"));
+                        if ( sm.size() > 0 ) {
+                            string chunkId = sm[1];
+                            batch.Delete("chunks::" + chunkId + "::container");
+                        }
+                    }
+                }
+
+                // remove container from local cache (if exists)
+                {
+                    string cache_path = c->user_lock + "-cache/" + containerId + ".container";
+                    if( file_exists(cache_path) ) {
+                        remove(cache_path.c_str());
+                    }
+                }
+
+                ++it;
+            }
+        }
+
+        // remove container from cloud storage
+        if( containersInvolved.size() > 0 ) {
+            // save 3 cloud object to array
+            CloudStorage *clouds[3];
+            for (int i = 0; i < 3; i++) {
+                clouds[i] = NULL;
+            }
+
+            // initialize cloud objects
+            map<string, int> types = {{"dropbox", 0}, {"onedrive", 1}, {"boxdotnet", 2}};
+            string accessToken, cloudid, cloudFolderId, type;
+            int i;
+            leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+            for (it->Seek("clouds::account::"), i = 0; it->Valid() && it->key().ToString() < "clouds::account::\xFF"; it->Next(), i++) {
+                if (i % NUM_CLOUD_ACC_KEY == 0) {
+                    string s = it->key().ToString();
+                    regex rgx ("^clouds::account::([0-9a-z\\-]+)::");
+                    smatch match;
+                    if (regex_search(s, match, rgx)) {
+                        cloudid = match[1];
+                    }
+
+                    accessToken = db->get("clouds::account::" + cloudid + "::accessToken");
+                    cloudFolderId = db->get("clouds::account::" + cloudid + "::folderId");
+                    type = db->get("clouds::account::" + cloudid + "::type");
+                    if (clouds[types[type]] == NULL) {
+                        switch (types[type]) {
+                            case 0:
+                                clouds[0] = new Dropbox(accessToken);
+                                break;
+                            case 1:
+                                clouds[1] = new OneDrive(accessToken);
+                                break;
+                            case 2:
+                                clouds[2] = new Box(accessToken);
+                                break;
+                        }
+
+                    }
+                }
+            }
+
+            vector<int> cloudList;
+            {
+                vector<string>::const_iterator it = containersInvolved.begin();
+                while( it != containersInvolved.end() ) {
+                    string ccloudid = db->get("container::" + *it + "::store::0::cloudid");
+                    cloudList.push_back(types[db->get("clouds::account::" + ccloudid + "::type")]);
+                    ++it;
+                }
+            }
+            
+            DeleteTask *t = new(tbb::task::allocate_root()) DeleteTask(db, containersInvolved, clouds, cloudList);
+            tbb::task::spawn_root_and_wait(*t);
+        }
+
+        // apply delete container records
+        s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
+
+        cout << "Success." << endl;
+
+    } else { }
+
+    return ERR_NONE;
+}
+
+bool FileOperation::isContainerReferred(Level *db, string containerId) {
+    leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+    for ( it->Seek("container::" + containerId + "::");
+         it->Valid() && it->key().ToString() < "container::" + containerId + "::\xFF";
+         it->Next() ) {
+
+        smatch sm;
+        regex_match(it->key().ToString(), sm, regex("(.*)::referenceCount$"));
+        if ( sm.size() > 0 ) {
+            string referenceCount = it->value().ToString();
+
+            if( strtoul(referenceCount.c_str(), NULL, 0) > 0 ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

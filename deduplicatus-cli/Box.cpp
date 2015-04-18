@@ -172,5 +172,21 @@ void Box::downloadFile(Level *db, string cid, string path) {
         std::cerr << e.what() << std::endl;
         return;
     }
+}
 
+void Box::deleteFile(Level *db, string cid) {
+    CURL *curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, (path_base + "/files/" + db->get("container::" + cid + "::store::0::fileid")).c_str());
+
+    // set oauth header
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, ("Authorization: Bearer " + accessToken).c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_null);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+
+    curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
 }

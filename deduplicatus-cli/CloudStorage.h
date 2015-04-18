@@ -15,6 +15,7 @@ public:
     virtual void accountInfo(Level *, WebAuth *, string) { };
     virtual void uploadFile(Level *, string, string) { };
     virtual void downloadFile(Level *, string, string) { };
+    virtual void deleteFile(Level *, string) { };
 
     string displayName = "";
     string cloudid = "";

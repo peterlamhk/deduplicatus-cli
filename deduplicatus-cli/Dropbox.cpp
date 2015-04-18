@@ -23,6 +23,7 @@
 #include "WebAuth.h"
 #include "Dropbox.h"
 #include "tool.h"
+#include "define.h"
 
 using namespace std;
 using namespace rapidjson;
@@ -38,6 +39,7 @@ Dropbox::Dropbox(string token) {
     // define cloud storage endpoints
     path_base = "https://api.dropbox.com/1";
     path_account_info = "/account/info";
+    path_delete_file = "/fileops/delete";
 }
 
 string Dropbox::brandName() {
@@ -127,4 +129,34 @@ void Dropbox::downloadFile(Level *db, string cid, string path) {
         std::cerr << e.what() << std::endl;
         return;
     }
+}
+
+void Dropbox::deleteFile(Level *db, string cid) {
+    CURL *curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, (path_base + path_delete_file).c_str());
+
+    // set oauth header
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, ("Authorization: Bearer " + accessToken).c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_null);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    // build request query
+    char * query = (char *) malloc(sizeof(char) * MAX_LEN_QUERY);
+
+    strcpy(query, "root=auto");
+    strcat(query, "&path=");
+
+    string dropbox_path = "/.deduplicatus/" + cid + ".container";
+    char * q_path = curl_easy_escape(curl, dropbox_path.c_str(), (int) dropbox_path.length());
+    strcat(query, q_path);
+
+    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
+
+    curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    free(query);
+    curl_easy_cleanup(curl);
 }
