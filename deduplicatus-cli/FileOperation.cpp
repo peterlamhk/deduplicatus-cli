@@ -101,7 +101,7 @@ int FileOperation::listFile(Level *db, string path) {
         }
 
         // remove trailing '/' for mkdir
-        if (path.back() == '/') {
+        if (path != "/" && path.back() == '/') {
             path.erase(path.length()-1);
         }
 
