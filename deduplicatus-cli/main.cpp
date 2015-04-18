@@ -163,8 +163,8 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
-                fo->putFile(db, argv[2], argv[3], "") :     // Deduplication-enabled Mode
-                fo->putFile(db, argv[2], argv[3], argv[4]); // File Manager Mode
+                fo->putFile(db, wa, argv[2], argv[3], "") :     // Deduplication-enabled Mode
+                fo->putFile(db, wa, argv[2], argv[3], argv[4]); // File Manager Mode
 
             // ensure to close leveldb handler
             delete db;
@@ -180,8 +180,8 @@ int main(int argc, const char * argv[]) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
-            fo->getFile(db, argv[2], argv[3], NULL) :   // Deduplication-enabled Mode (without verion-id)
-            fo->getFile(db, argv[2], argv[4], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
+            fo->getFile(db, wa, argv[2], argv[3], NULL) :   // Deduplication-enabled Mode (without verion-id)
+            fo->getFile(db, wa, argv[2], argv[4], argv[3]); // Deduplication-enabled Mode (with verion-id) or File Manager Mode
 
             // ensure to close leveldb handler
             delete db;

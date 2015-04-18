@@ -389,7 +389,7 @@ public:
     : db(db_), containerNeeded(containerNeeded_), cloud(cloud_), path(path_), cloudList(cloudList_) {}
 };
 
-int FileOperation::putFile(Level *db, const char *path, const char *remotepath, const char *cloud) {
+int FileOperation::putFile(Level *db, WebAuth *wa, const char *path, const char *remotepath, const char *cloud) {
     if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
         // check local file exists
         FILE * targetFile = fopen(path, "rb");
@@ -658,6 +658,8 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
         }
         chunkVector.clear();
 
+        // temporary fix for possible expired access token
+        bool refreshAccessToken = ( containerToBeUpload.size() > 0 );
 
         // save 3 cloud object to array
         CloudStorage *clouds[3];
@@ -690,16 +692,25 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
                             clouds[0] = new Dropbox(accessToken);
                             cloudFolderIds.push_back(cloudFolderId);
                             cloudIds.push_back(cloudid);
+                            if( refreshAccessToken ) {
+                                clouds[0]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                         case 1:
                             clouds[1] = new OneDrive(accessToken);
                             cloudFolderIds.push_back(cloudFolderId);
                             cloudIds.push_back(cloudid);
+                            if( refreshAccessToken ) {
+                                clouds[1]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                         case 2:
                             clouds[2] = new Box(accessToken);
                             cloudFolderIds.push_back(cloudFolderId);
                             cloudIds.push_back(cloudid);
+                            if( refreshAccessToken ) {
+                                clouds[2]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                     }
                 }
@@ -736,7 +747,7 @@ int FileOperation::putFile(Level *db, const char *path, const char *remotepath, 
     return ERR_NONE;
 }
 
-int FileOperation::getFile(Level *db, const char *remote, const char *local, const char *reference) {
+int FileOperation::getFile(Level *db, WebAuth *wa, const char *remote, const char *local, const char *reference) {
     if ( c->user_mode.compare(c->mode_deduplication) == 0 ) {
         string filedir = dirname((char *) remote);
         string filename = basename((char *) remote);
@@ -841,6 +852,9 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
             }
         }
 
+        // temporary fix for possible expired access token
+        bool refreshAccessToken = ( containerNeeded.size() > 0 );
+
         // save 3 cloud object to array
         CloudStorage *clouds[3];
         for (int i = 0; i < 3; i++) {
@@ -868,14 +882,24 @@ int FileOperation::getFile(Level *db, const char *remote, const char *local, con
                     switch (types[type]) {
                         case 0:
                             clouds[0] = new Dropbox(accessToken);
+                            if( refreshAccessToken ) {
+                                clouds[0]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                         case 1:
                             clouds[1] = new OneDrive(accessToken);
+                            if( refreshAccessToken ) {
+                                clouds[1]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                         case 2:
                             clouds[2] = new Box(accessToken);
+                            if( refreshAccessToken ) {
+                                clouds[2]->accountInfo(db, wa, cloudid);
+                            }
                             break;
                     }
+
                 }
             }
         }

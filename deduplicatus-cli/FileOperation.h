@@ -25,8 +25,8 @@ public:
     int listCloud(Level *, WebAuth *);
     int makeDirectory(Level *, const char *, const char *);
     int removeDirectory(Level *, const char *, const char *);
-    int putFile(Level *, const char *, const char *, const char *);
-    int getFile(Level *, const char *, const char *, const char *);
+    int putFile(Level *, WebAuth *, const char *, const char *, const char *);
+    int getFile(Level *, WebAuth *, const char *, const char *, const char *);
     int moveFile(Level *, const char *, const char *, const char *);
     int copyFile(Level *, const char *, const char *, const char *);
 
