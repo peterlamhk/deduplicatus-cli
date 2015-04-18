@@ -10,6 +10,7 @@
 #define deduplicatus_cli_error_h
 
 #define FILE_MANAGER_ENABLED false
+#define DISABLE_LOCK_CHECK_LOCAL_OP true
 
 #define ERR_NONE 0
 #define ERR_ALREADY_SIGNIN 1

@@ -27,6 +27,7 @@ int main(int argc, const char * argv[]) {
     WebAuth *wa = new WebAuth(c);
     FileOperation *fo = new FileOperation(c);
     bool operationFound = false;
+    bool skipLockCheck = !FILE_MANAGER_ENABLED && DISABLE_LOCK_CHECK_LOCAL_OP;
     unsigned operationResult = ERR_NONE;
 
     // exec: status
@@ -115,9 +116,9 @@ int main(int argc, const char * argv[]) {
     // exec: repair
     if( !operationFound && argc == 2 && strcmp(argv[1], "repair") == 0 ) {
         operationFound = true;
-        wa->getStatus();
+        if( !skipLockCheck ) wa->getStatus();
 
-        if((operationResult = requireLocked(wa)) == ERR_NONE) {
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE) {
             leveldb::RepairDB(c->user_lock, leveldb::Options());
             cout << "LevelDB (" + c->user_lock + "/) repaired." << endl;
             return ERR_NONE;
@@ -126,11 +127,12 @@ int main(int argc, const char * argv[]) {
 
     // exec: ls
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls") == 0 ) {
-      operationFound = true;
-      wa->getStatus();
-      if((operationResult = requireLocked(wa)) == ERR_NONE) {
-        Level *db = new Level();
-        db->open(c->user_lock);
+        operationFound = true;
+        if( !skipLockCheck ) wa->getStatus();
+
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE) {
+            Level *db = new Level();
+            db->open(c->user_lock);
 
             string path = string(argv[2]);
             operationResult = fo->listFile(db, path);
@@ -143,8 +145,9 @@ int main(int argc, const char * argv[]) {
     // exec: ls-version
     if( !operationFound && argc == 3 && strcmp(argv[1], "ls-version") == 0 ) {
         operationFound = true;
-        wa->getStatus();
-        if ((operationResult = requireLocked(wa)) == ERR_NONE) {
+        if( !skipLockCheck ) wa->getStatus();
+
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE) {
             Level *db = new Level();
             db->open(c->user_lock);
 
@@ -155,6 +158,7 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: put
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "put") == 0 ) {
         operationFound = true;
         wa->getStatus();
@@ -188,11 +192,12 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: mv
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "mv") == 0 ) {
         operationFound = true;
-        wa->getStatus();
+        if( !skipLockCheck ) wa->getStatus();
 
-        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
@@ -207,9 +212,9 @@ int main(int argc, const char * argv[]) {
     // exec: cp
     if( !operationFound && argc >= 4 && argc <= 5 && strcmp(argv[1], "cp") == 0 ) {
         operationFound = true;
-        wa->getStatus();
+        if( !skipLockCheck ) wa->getStatus();
 
-        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 4 ) ?
@@ -241,9 +246,9 @@ int main(int argc, const char * argv[]) {
     // exec: mkdir
     if( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "mkdir") == 0 ) {
         operationFound = true;
-        wa->getStatus();
+        if( !skipLockCheck ) wa->getStatus();
 
-        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 3 ) ?
@@ -255,11 +260,12 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: rmdir
     if ( !operationFound && argc >= 3 && argc <= 4 && strcmp(argv[1], "rmdir") == 0 ) {
         operationFound = true;
-        wa->getStatus();
+        if( !skipLockCheck ) wa->getStatus();
 
-        if ( (operationResult = requireLocked(wa)) == ERR_NONE ) {
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE ) {
             Level *db = new Level();
             db->open(c->user_lock);
             operationResult = ( argc == 3 ) ?
