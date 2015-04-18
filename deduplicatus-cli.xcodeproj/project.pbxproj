@@ -54,6 +54,7 @@
 		D074DD201AD3BA13008EF8D1 /* CloudStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CloudStorage.h; sourceTree = "<group>"; };
 		D0D128C31AD5393B00709F4A /* rabinpoly.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rabinpoly.c; path = rabinpoly/rabinpoly.c; sourceTree = SOURCE_ROOT; };
 		D0D128C41AD5393B00709F4A /* rabinpoly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rabinpoly.h; path = rabinpoly/rabinpoly.h; sourceTree = SOURCE_ROOT; };
+		D0D128C61AD657F800709F4A /* Chunk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Chunk.h; sourceTree = "<group>"; };
 		D0FE2FFB1AC9438500DA877B /* deduplicatus-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "deduplicatus-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0FE2FFE1AC9438500DA877B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -119,6 +120,7 @@
 				D074DCFD1ACD5E2F008EF8D1 /* define.h */,
 				D0D128C31AD5393B00709F4A /* rabinpoly.c */,
 				D0D128C41AD5393B00709F4A /* rabinpoly.h */,
+				D0D128C61AD657F800709F4A /* Chunk.h */,
 			);
 			path = "deduplicatus-cli";
 			sourceTree = "<group>";
@@ -281,6 +283,7 @@
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
 					/usr/local/Cellar/libtomcrypt/1.17/include,
+					"/usr/local/Cellar/tbb/4.3-20141023/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -288,20 +291,20 @@
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					/usr/local/Cellar/libtomcrypt/1.17/lib,
+					"/usr/local/Cellar/tbb/4.3-20141023/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
 					"-I\"rapidjson/include\"",
-					"-lboost_system",
 					"-lboost_system-mt",
 					"-lboost_filesystem-mt",
 					"-lboost_thread-mt",
 					"-lcppnetlib-client-connections",
 					"-lcppnetlib-uri",
-					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
 					"-ltomcrypt",
+					"-ltbb",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
@@ -321,6 +324,7 @@
 					/usr/local/Cellar/boost/1.57.0/include,
 					"/usr/local/Cellar/cpp-netlib/netlib/include",
 					/usr/local/Cellar/libtomcrypt/1.17/include,
+					"/usr/local/Cellar/tbb/4.3-20141023/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -328,20 +332,20 @@
 					/usr/local/Cellar/boost/1.57.0/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					/usr/local/Cellar/libtomcrypt/1.17/lib,
+					"/usr/local/Cellar/tbb/4.3-20141023/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-lcurl",
 					"-I\"rapidjson/include\"",
-					"-lboost_system",
 					"-lboost_system-mt",
 					"-lboost_filesystem-mt",
 					"-lboost_thread-mt",
 					"-lcppnetlib-client-connections",
 					"-lcppnetlib-uri",
-					"-lcppnetlib-server-parsers",
 					"-lssl",
 					"-lcrypto",
 					"-ltomcrypt",
+					"-ltbb",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "rapidjson/include leveldb/include";
