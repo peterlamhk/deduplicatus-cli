@@ -1695,7 +1695,7 @@ int FileOperation::searchItem(Level *db, const char *k) {
                     if( folderid.compare(rootfolder) == 0 ) {
                         folderpath = "/";
                     } else {
-                        folderpath = db->get("folderid::" + folderid);
+                        folderpath = db->get("folderid::" + folderid) + "/";
                     }
 
                     modified = db->get("file::" + folderid + "::" + filename + "::timestamp");
