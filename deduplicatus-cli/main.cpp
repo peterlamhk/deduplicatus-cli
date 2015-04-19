@@ -277,6 +277,22 @@ int main(int argc, const char * argv[]) {
         }
     }
 
+    // exec: keyword
+    if( !operationFound && argc == 3 && strcmp(argv[1], "search") == 0 ) {
+        operationFound = true;
+        if( !skipLockCheck ) wa->getStatus();
+
+        if( skipLockCheck || (operationResult = requireLocked(wa)) == ERR_NONE) {
+            Level *db = new Level();
+            db->open(c->user_lock);
+
+            operationResult = fo->searchItem(db, argv[2]);
+
+            // ensure to close leveldb handler
+            delete db;
+        }
+    }
+
     // show usage if no operation is done
     if ( !operationFound ) {
         showUsage(argv[0]);
@@ -341,6 +357,7 @@ void showUsage(const char * path) {
     cout << "\t" << executable << " rm <path> (<version-id>)" << endl;
     cout << "\t" << executable << " mkdir <path>" << endl;
     cout << "\t" << executable << " rmdir <path>" << endl;
+    cout << "\t" << executable << " search <keyword>" << endl;
     cout << endl;
 
     cout << "Caution:" << endl;

@@ -87,7 +87,7 @@ int FileOperation::listFile(Level *db, string path) {
 
                 // folder name
                 string s = it->key().ToString();
-                regex rgx ("^folder::"+path+"([0-9a-z\\-]+)::");
+                regex rgx ("^folder::"+path+"([^\\/]+)::");
                 regex pwd ("^folder::"+path+"::");
                 smatch match;
                 if (regex_match(s, match, pwd)) {
@@ -268,12 +268,25 @@ int FileOperation::makeDirectory(Level *db, const char *path, const char *cloud)
         stringstream timestamp;
         timestamp << time(NULL);
 
-        db->put("folder::" + (string)path + "::id", uuid());
-        db->put("folder::" + (string)path + "::lastModified", timestamp.str());
+        leveldb::WriteBatch batch;
+        string folderid = uuid();
+
+        batch.Put("folder::" + (string)path + "::id", folderid);
+        batch.Put("folder::" + (string)path + "::lastModified", timestamp.str());
+        batch.Put("folderid::" + folderid, (string)path);
 
         // update parent directory's last modified timestamp
         string parent = dirname((char *) path);
-        db->put("folder::" + parent + "::lastModified", timestamp.str());
+        batch.Put("folder::" + parent + "::lastModified", timestamp.str());
+
+        // commit data change to leveldb
+        leveldb::WriteOptions write_options;
+        write_options.sync = true;
+        leveldb::Status s = db->getDB()->Write(write_options, &batch);
+        if( !s.ok() ) {
+            cerr << "Error: can't save file information into leveldb." << endl;
+            return ERR_LEVEL_CORRUPTED;
+        }
 
         cout << "Folder created." << endl;
 
@@ -330,6 +343,7 @@ int FileOperation::removeDirectory(Level *db, const char *path, const char *clou
         batch.Put("folder::" + parent + "::lastModified", timestamp.str());
         batch.Delete("folder::" + target + "::id");
         batch.Delete("folder::" + target + "::lastModified");
+        batch.Delete("folderid::" + folderid);
 
         // commit data change to leveldb
         leveldb::WriteOptions write_options;
@@ -1615,4 +1629,94 @@ bool FileOperation::isContainerReferred(Level *db, string containerId) {
     }
 
     return false;
+}
+
+int FileOperation::searchItem(Level *db, const char *k) {
+    if (c->user_mode.compare(c->mode_deduplication) == 0) {
+        string keyword = (string) k;
+
+        if( keyword.length() == 0 ) {
+            cerr << "Error: please enter a keyword." << endl;
+            return ERR_LOCAL_ERROR;
+        }
+
+        // result header
+        cout << "  Last Modified\t\tSize\tPath" << endl;
+
+        // setup iterator
+        leveldb::Iterator *it = db->getDB()->NewIterator(leveldb::ReadOptions());
+
+        // iterate folder list
+        for ( it->Seek("folder::");
+             it->Valid() && it->key().ToString() < "folder::\xFF";
+             it->Next() ) {
+            string currentKey = it->key().ToString();
+
+            string fullpath;
+            smatch prefix, postfix, pathmatch;
+            regex_match(currentKey, prefix, regex("^folder::(.+)" + keyword + "([^\\/]*)::lastModified$"));
+            regex_match(currentKey, postfix, regex("^folder::(.*)" + keyword + "([^\\/]+)::lastModified$"));
+            if ( (prefix.size() + postfix.size()) > 0 ||
+                currentKey.compare("folder::" + keyword + "::lastModified") == 0 ) {
+                regex_match(currentKey, pathmatch, regex("^folder::(.*)::lastModified$"));
+
+                time_t t = stoi(it->value().ToString());
+                struct tm *tm = localtime(&t);
+                char date[20];
+                strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
+
+                fullpath = pathmatch[1];
+                printf("D %s\t0\t%s\n", date, fullpath.c_str());
+            }
+        }
+
+        // get root folder id
+        string rootfolder = db->get("folder::/::id");
+
+        // iterate file list
+        for ( it->Seek("file::");
+             it->Valid() && it->key().ToString() < "file::\xFF";
+             it->Next() ) {
+            string currentKey = it->key().ToString();
+
+            smatch prefix, postfix, fullmatch;
+            regex_match(currentKey, prefix, regex("^file::([0-9a-z\\-]+)::(.+)" + keyword + "(.*)::name$"));
+            regex_match(currentKey, postfix, regex("^file::([0-9a-z\\-]+)::(.+)" + keyword + "(.*)::name$"));
+            regex_match(currentKey, fullmatch, regex("^file::([0-9a-z\\-]+)::" + keyword + "::name$"));
+            if ( (prefix.size() + postfix.size() + fullmatch.size()) > 0 ) {
+                string filename = it->value().ToString(), folderid;
+
+                if( prefix.size() > 0 ) { folderid = prefix[1]; }
+                if( postfix.size() > 0 ) { folderid = postfix[1]; }
+                if( fullmatch.size() > 0 ) { folderid = fullmatch[1]; }
+
+                {
+                    string folderpath, modified, versions, size;
+                    if( folderid.compare(rootfolder) == 0 ) {
+                        folderpath = "/";
+                    } else {
+                        folderpath = db->get("folderid::" + folderid);
+                    }
+
+                    modified = db->get("file::" + folderid + "::" + filename + "::timestamp");
+                    versions = db->get("file::" + folderid + "::" + filename + "::versions");
+                    size = db->get("file::" + folderid + "::" + filename + "::lastSize");
+
+                    time_t t = stoi(modified);
+                    struct tm *tm = localtime(&t);
+                    char date[20];
+                    strftime(date, sizeof(date), "%Y-%m-%d %H:%M", tm);
+
+                    if( versions.find(";") == string::npos ) {
+                        cout << "F " << date << "\t" << size << "\t" << folderpath << filename << endl;
+                    } else {
+                        cout << "V " << date << "\t" << size << "\t" << folderpath << filename << endl;
+                    }
+                }
+            }
+        }
+
+    } else { }
+
+    return ERR_NONE;
 }
