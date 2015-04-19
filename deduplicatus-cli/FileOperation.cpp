@@ -1681,7 +1681,7 @@ int FileOperation::searchItem(Level *db, const char *k) {
 
             smatch prefix, postfix, fullmatch;
             regex_match(currentKey, prefix, regex("^file::([0-9a-z\\-]+)::(.+)" + keyword + "(.*)::name$"));
-            regex_match(currentKey, postfix, regex("^file::([0-9a-z\\-]+)::(.+)" + keyword + "(.*)::name$"));
+            regex_match(currentKey, postfix, regex("^file::([0-9a-z\\-]+)::(.*)" + keyword + "(.+)::name$"));
             regex_match(currentKey, fullmatch, regex("^file::([0-9a-z\\-]+)::" + keyword + "::name$"));
             if ( (prefix.size() + postfix.size() + fullmatch.size()) > 0 ) {
                 string filename = it->value().ToString(), folderid;
